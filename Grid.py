@@ -26,20 +26,23 @@ class Grid:
 			bld = gpd.GeoDataFrame()
 			pcl = gpd.GeoDataFrame()
 			net = gpd.GeoDataFrame()
+			veg = gpd.GeoDataFrame()
 
 			# Filter grid for type
 			centroids = grid[grid['Type'] == tile.name].centroid
 
 			# Iterate over centroids
 			for point in centroids:
-				tile.move_all_layers(point)
-				bld = pd.concat([bld, tile.buildings])
-				pcl = pd.concat([pcl, tile.parcels])
-				net = pd.concat([net, tile.network])
+				all_layers = tile.move_all_layers(point)
+				bld = pd.concat([bld, all_layers[all_layers['Type'] == 'bldgs']])
+				pcl = pd.concat([pcl, all_layers[all_layers['Type'] == 'prcls']])
+				net = pd.concat([net, all_layers[all_layers['Type'] == 'ntwkr']])
+				veg = pd.concat([veg, all_layers[all_layers['Type'] == 'trees']])
 
 			bld.to_file(f'{self.directory}/{tile.name}_bld.shp')
 			pcl.to_file(f'{self.directory}/{tile.name}_pcl.shp')
 			if len(net) > 0: net.to_file(f'{self.directory}/{tile.name}_net.shp')
+			veg.to_file(f'{self.directory}/{tile.name}_veg.shp')
 		return
 
 	def test_place_tiles(self):
