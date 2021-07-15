@@ -50,6 +50,14 @@ class Indicators:
 		os_bld = gpd.overlay(gdf, self.parcels[self.parcels['LANDUSE'] == 'OS'])
 		return self.buildings[~self.buildings['bid'].isin(os_bld['bid'])]
 
+	def get_area_by_land_use(self):
+		gdf = self.parcels.copy()
+		return pd.DataFrame(gdf.groupby('LANDUSE').sum()['area'])
+
+	def get_population_stats(self):
+		gdf = self.buildings.copy()
+		return gdf['res_count'].sum()
+
 	def test_indicators(self):
 		bld_cols = ['LANDUSE', 'maxstories', 'laneway']
 		for col in bld_cols:
@@ -63,6 +71,8 @@ class Indicators:
 		self.buildings = self.get_commercial_units()
 		self.buildings = self.get_resident_count()
 		self.buildings = self.remove_buildings_from_open_spaces()
+		self.get_area_by_land_use()
+
 		return
 
 
@@ -76,3 +86,4 @@ if __name__ == '__main__':
 	ind.test_indicators()
 	ind.parcels.to_file('data/parcels_indicator.shp')
 	ind.buildings.to_file('data/buildings_indicator.shp')
+	ind.get_area_by_land_use().to_csv('data/land_use.csv')

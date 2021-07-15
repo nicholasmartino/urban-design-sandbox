@@ -22,12 +22,12 @@ class Grid:
 		assert 'High St' in self.gdf.columns, KeyError("High St column not found in gdf")
 
 	def assert_land_use_layer(self):
-		assert 'Land Use' in self.land_use.columns, KeyError("Land Use column not found in land_use layer")
+		assert 'elab_lu' in self.land_use.columns, KeyError("elab_lu column not found in land_use layer")
 
 	def assign_subtypes_by_adjency(self, consider_vertices=True):
 		subtypes={
 			'Horizontal': [
-				{0}, {2}, {4}, {5}, {6}, {7},
+				{0}, {2}, {5}, {6}, {7},
 				{0, 2}, {4, 7},
 				{0, 2, 7}, {0, 2, 5}, {0, 2, 6},
 				{0, 2, 4, 7}, {0, 2, 4, 5}, {0, 1, 2, 3}, {0, 2, 4, 7}, {0, 2, 5, 6}, {0, 2, 6, 7},
@@ -35,9 +35,10 @@ class Grid:
 			'Diagonal': [],
 			'Diagonal Cross': [],
 			'Standard Left': [
+				{4},
 				{1, 5},
-				{1, 3, 4}, {1, 3, 5}, {0, 3, 4}, {0, 1, 5}, {3, 4}, {3, 4, 6},
-				{0, 3, 4, 7}, {0, 1, 3, 5}, {0, 1, 4, 5}, {0, 1, 3, 4}, {0, 1, 4, 7},
+				{1, 3, 5}, {0, 3, 4}, {0, 1, 5}, {3, 4}, {3, 4, 6},
+				{0, 3, 4, 7}, {0, 1, 3, 5}, {0, 1, 4, 5}, {0, 1, 3, 4}, {0, 1, 4, 7}, {0, 3, 4, 5},
 				{0, 3, 4, 5, 7}, {0, 1, 3, 4, 5}, {0, 1, 2, 3, 4}, {1, 3, 4, 5, 6},
 				{0, 1, 3, 4, 5, 6}, {0, 1, 3, 4, 5, 7}],
 			'L-Middle Left': [{0, 1}, {0, 1, 2, 5}],
@@ -45,12 +46,13 @@ class Grid:
 			'L-Middle Down Left': [{0, 3}],
 			'L-Middle Down': [{2, 3}],
 			'T-Shape': [
-				{0, 1, 2}, {1, 2, 3}, {0, 1, 2, 6, 7}, {0, 1, 2, 3, 6}, {0, 1, 2, 5, 7},
+				{0, 1, 2}, {1, 2, 3}, {0, 2, 4}, {0, 1, 2, 6, 7}, {0, 1, 2, 3, 6}, {0, 1, 2, 5, 7},
 				{0, 1, 2, 3, 4, 7}, {0, 1, 2, 3, 6, 7}, {0, 1, 2, 3, 4, 5, 7}, {0, 1, 2, 3, 5, 7}, {1, 2, 3, 4, 5, 6},
 				{0, 1, 2, 3, 4, 5, 6}, {0, 1, 2, 3, 5, 6, 7}, {0, 1, 2, 3, 4, 5, 6, 7}],
 			'T-Shape Down': [],
-			'T-Shape Left': [{0, 1, 3}, {0, 2, 3}, {0, 1, 2, 4, 5}, {0, 1, 2, 3, 4, 5}, {0, 1, 2, 4, 5, 6, 7}],
+			'T-Shape Left': [{0, 1, 3}, {0, 2, 3}, {1, 3, 4}, {0, 1, 2, 4, 5}, {0, 2, 3, 4, 5}, {0, 2, 4, 6, 7}, {0, 1, 2, 3, 4, 5}, {0, 1, 2, 4, 5, 6, 7}],
 		}
+
 
 		# 'Vertical': [
 		# 	{1}, {3},
@@ -117,14 +119,25 @@ class Grid:
 							gdf.loc[i, 'Subtype'] = sub
 
 		gdf['Subtype'] = gdf['Subtype'].fillna('Standard')
-		# gdf.to_file('del_grid.geojson', driver='GeoJSON')
+		gdf.to_file('del_grid.geojson', driver='GeoJSON')
 		return gdf
 
 	def assign_subtypes_by_landuse(self):
-		lu_subtype_gdf = self.gdf.copy()[self.gdf['Type'].isin(['Open_Low_Density', 'Coarse_Grain'])]
+		gdf = self.gdf.copy()
+		real_land_use_gdf = self.land_use[self.land_use['elab_lu'].isin(['CM', 'IND', 'CV'])].copy()
+		real_land_use_gdf['area'] = real_land_use_gdf.area
 
-		for cell in lu_subtype_gdf.index:
-			cell
+		for i in tqdm(gdf.index):
+			if gdf.loc[i, 'Type'] in ['Open_Low_Density', 'Coarse_Grain']:
+				# Get majority of real place land use within the cell
+				in_cell_lu = gpd.overlay(real_land_use_gdf, gdf.loc[[i], :].copy())
+				in_cell_lu = in_cell_lu[in_cell_lu['elab_lu'].isin(['CV', 'CM', 'IND'])].copy()
+				if len(in_cell_lu) > 0:
+					larger_use = list(in_cell_lu.groupby('elab_lu').sum().sort_values(by='area', ascending=False).index)[0]
+					if larger_use == 'CV': self.gdf.loc[i, 'Subtype'] = 'Standard'
+					elif larger_use == 'CM': self.gdf.loc[i, 'Subtype'] = 'Commercial'
+					elif larger_use == 'IND': self.gdf.loc[i, 'Subtype'] = 'Industrial'
+
 		return gdf
 
 	def test_assign_subtypes(self):
@@ -205,5 +218,5 @@ if __name__ == '__main__':
 	streets['geometry'] = streets.buffer(5)
 	grid_gdf.loc[gpd.overlay(grid_gdf, streets[streets['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
 	grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
-	Grid(grid_gdf, TILES, 'data', land_use=gpd.read_file()).test_grid()
+	Grid(grid_gdf, TILES, 'data', land_use=gpd.read_file('/Users/nicholasmartino/Desktop/Landuse2016/Landuse2016.shp')).test_grid()
 	# f'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/City-Wide'
