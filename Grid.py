@@ -1,5 +1,5 @@
 import os
-from Morphology.ShapeTools import Shape
+from morphology.ShapeTools import Shape
 import geopandas as gpd
 import pandas as pd
 from Tiles import TILES
@@ -9,10 +9,11 @@ from shapely.affinity import scale
 
 
 class Grid:
-	def __init__(self, gdf, tiles, directory=''):
+	def __init__(self, gdf, tiles, directory='', land_use=None):
 		self.gdf = gdf
 		self.tiles = tiles
 		self.directory = directory
+		self.land_use = land_use
 
 	def assert_type_column(self):
 		assert 'Type' in self.gdf.columns, KeyError("Type column not found in gdf")
@@ -20,25 +21,65 @@ class Grid:
 	def assert_high_st_column(self):
 		assert 'High St' in self.gdf.columns, KeyError("High St column not found in gdf")
 
-	def get_cell_subtypes(self):
+	def assert_land_use_layer(self):
+		assert 'Land Use' in self.land_use.columns, KeyError("Land Use column not found in land_use layer")
+
+	def assign_subtypes_by_adjency(self, consider_vertices=True):
 		subtypes={
-			'Horizontal': [{0}, {2}, {0, 2}, {0, 2, 5}, {0, 2, 6}, {0, 1, 2, 3}, {0, 2, 4, 7}, {0, 2, 5, 6}, {0, 2, 6, 7}, {0, 2, 4, 5, 6}, {4, 7}, {4}, {5}, {6}, {7}],
-			'Vertical Left': [{1, 3, 4}, {1, 3, 5}, {0, 3, 4}, {0, 1, 4, 5}, {0, 1, 3, 4}, {0, 1, 2, 3, 4}, {1, 3, 4, 5, 6}, {0, 1, 3, 4, 5, 6}, {0, 1, 3, 4, 5, 7}],
-			'Vertical Middle': [{1}, {3}, {1, 3}],
-			'Vertical': [{1, 3, 7}, {1, 3, 6}, {2, 3, 7}, {2, 3, 6, 7}, {1, 2, 3, 6}, {2, 3, 4, 6, 7}, {1, 2, 3, 5, 6, 7}, {1, 2, 3, 6, 7}, {1, 2, 3, 4, 6, 7}],
+			'Horizontal': [
+				{0}, {2}, {4}, {5}, {6}, {7},
+				{0, 2}, {4, 7},
+				{0, 2, 7}, {0, 2, 5}, {0, 2, 6},
+				{0, 2, 4, 7}, {0, 2, 4, 5}, {0, 1, 2, 3}, {0, 2, 4, 7}, {0, 2, 5, 6}, {0, 2, 6, 7},
+				{0, 2, 4, 5, 6}],
+			'Diagonal': [],
+			'Diagonal Cross': [],
+			'Standard Left': [
+				{1, 5},
+				{1, 3, 4}, {1, 3, 5}, {0, 3, 4}, {0, 1, 5}, {3, 4}, {3, 4, 6},
+				{0, 3, 4, 7}, {0, 1, 3, 5}, {0, 1, 4, 5}, {0, 1, 3, 4}, {0, 1, 4, 7},
+				{0, 3, 4, 5, 7}, {0, 1, 3, 4, 5}, {0, 1, 2, 3, 4}, {1, 3, 4, 5, 6},
+				{0, 1, 3, 4, 5, 6}, {0, 1, 3, 4, 5, 7}],
 			'L-Middle Left': [{0, 1}, {0, 1, 2, 5}],
-			'L-Middle': [{1, 2}, {0, 1, 2, 6}],
+			'L-Middle': [{1, 2}, {0, 1, 2, 6}, {0, 1, 6}, {0, 1, 2, 4, 5, 6}],
+			'L-Middle Down Left': [{0, 3}],
+			'L-Middle Down': [{2, 3}],
+			'T-Shape': [
+				{0, 1, 2}, {1, 2, 3}, {0, 1, 2, 6, 7}, {0, 1, 2, 3, 6}, {0, 1, 2, 5, 7},
+				{0, 1, 2, 3, 4, 7}, {0, 1, 2, 3, 6, 7}, {0, 1, 2, 3, 4, 5, 7}, {0, 1, 2, 3, 5, 7}, {1, 2, 3, 4, 5, 6},
+				{0, 1, 2, 3, 4, 5, 6}, {0, 1, 2, 3, 5, 6, 7}, {0, 1, 2, 3, 4, 5, 6, 7}],
+			'T-Shape Down': [],
+			'T-Shape Left': [{0, 1, 3}, {0, 2, 3}, {0, 1, 2, 4, 5}, {0, 1, 2, 3, 4, 5}, {0, 1, 2, 4, 5, 6, 7}],
+		}
+
+		# 'Vertical': [
+		# 	{1}, {3},
+		# 	{1, 2}, {3, 7}, {1, 3},
+		# 	{1, 3, 7}, {1, 3, 6}, {1, 5, 6}, {2, 3, 7}, {1, 5, 6},
+		# 	{2, 3, 4, 6}, {2, 3, 6, 7}, {1, 2, 3, 6}, {1, 2, 6, 7}, {2, 3, 5, 7},
+		# 	{2, 3, 4, 6, 7}, {1, 2, 3, 4, 7}, {1, 2, 3, 6, 7},
+		# 	{1, 2, 3, 5, 6, 7}, {1, 2, 3, 4, 6, 7}],
+
+		"""
+		subtypes={
+			'Horizontal': [{0}, {2}, {0, 2}, {0, 1, 2, 3}],
+			'Vertical Left': [{1, 3, 4}, {0, 3, 4}, {0, 1, 3, 4}, {0, 1, 2, 3, 4}],
+			'Vertical Middle': [{1}, {3}, {1, 3}],
+			'Vertical': [{1, 3}],
+			'L-Middle Left': [{0, 1}],
+			'L-Middle': [{1, 2}],
 			'L-Middle Down Left': [{0, 3}],
 			'L-Middle Down': [{2, 3}],
 			'L-Edge Left': [],
 			'L-Edge': [],
 			'L-Edge Down Left': [],
 			'L-Edge Down': [],
-			'T-Shape': [{0, 1, 2}],
+			'T-Shape': [{0, 1, 2}, {1, 2, 3}],
 			'T-Shape Down': [],
-			'T-Shape Left': [{0, 1, 3}, {0, 2, 3}, {0, 1, 2, 4, 5}, {0, 1, 2, 3, 4, 5}],
-			'T-Shape Down Left': [{1, 2, 3}, {0, 1, 2, 3, 6}, {0, 1, 2, 3, 6, 7}]
+			'T-Shape Left': [{0, 1, 3}, {0, 2, 3}],
 		}
+
+		"""
 
 		self.gdf['id'] = self.gdf.index
 		gdf = self.gdf.copy()
@@ -52,9 +93,12 @@ class Grid:
 			# Explode cell into segments and centroids
 			edges = Shape(Shape(gdf.loc[[i], ['geometry']]).explode()).divorce()
 			edges['geometry'] = edges.centroid
-			vertices = Shape(gdf.loc[[i], ['geometry']]).extract_vertices().drop_duplicates(subset=['geometry'])
-			vertices['sid'] = range(4, 8)
-			points = pd.concat([edges, vertices]).reset_index(drop=True)
+			if consider_vertices:
+				vertices = Shape(gdf.loc[[i], ['geometry']]).extract_vertices().drop_duplicates(subset=['geometry'])
+				vertices['sid'] = range(4, 8)
+				points = pd.concat([edges, vertices]).reset_index(drop=True)
+			else:
+				points = edges.copy()
 			points['geometry'] = points.buffer(0.1)
 
 			# Intersect edges and vertices with adjacent geometries
@@ -73,34 +117,25 @@ class Grid:
 							gdf.loc[i, 'Subtype'] = sub
 
 		gdf['Subtype'] = gdf['Subtype'].fillna('Standard')
-		gdf.to_file('del_grid.geojson', driver='GeoJSON')
+		# gdf.to_file('del_grid.geojson', driver='GeoJSON')
 		return gdf
 
-	def test_get_cell_subtypes(self):
+	def assign_subtypes_by_landuse(self):
+		lu_subtype_gdf = self.gdf.copy()[self.gdf['Type'].isin(['Open_Low_Density', 'Coarse_Grain'])]
+
+		for cell in lu_subtype_gdf.index:
+			cell
+		return gdf
+
+	def test_assign_subtypes(self):
 		assert len(self.gdf.index) == len(self.gdf.index.unique()), IndexError("Duplicated indices found")
 		self.assert_type_column()
-		self.gdf = self.get_cell_subtypes()
+		self.gdf = self.assign_subtypes_by_adjency()
+		if self.land_use is not None:
+			self.assert_land_use_layer()
+			self.gdf = self.assign_subtypes_by_landuse()
 		assert sum(self.gdf['Subtype'].isna()) == 0
 		return
-
-	"""def vary_tile_types(self):
-		for tile in tqdm(self.tiles):
-			v_tile1 = Tile(tile)
-			v_tile2
-			v_tile3
-
-			if tile.subtype in ['Vertical', 'L-Middle', 'L-Edge', 'T-Shape']:
-				v_tile1.all_layers = tile.flip_horizontal()
-				v_tile1.subtype = f'{tile.subtype} Down'
-
-				v_tile2.all_layers = tile.flip_vertical()
-				v_tile2.subtype = f'{tile.subtype} Left'
-
-				v_tile3.all_layers = tile.flip_horizontal().flip_vertical()
-				v_tile3.subtype = f'{tile.subtype} Down Left'
-
-				self.tiles = self.tiles + [v_tile1, v_tile2, v_tile3]
-		return"""
 
 	def place_tiles(self):
 		"""
@@ -146,7 +181,7 @@ class Grid:
 		return self
 
 	def test_grid(self):
-		self.test_get_cell_subtypes()
+		self.test_assign_subtypes()
 		self.test_place_tiles()
 		return
 
@@ -162,14 +197,13 @@ if __name__ == '__main__':
 		10: 'Typical_Van_SF',
 		11: 'Typical_Van_West_SF'
 	}
-	# grid_gdf = gpd.read_file('/Volumes/ELabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/gmm_grids/fishnet_CoV_gmm_r4_built.shp')
-	grid_gdf = gpd.read_file('data/sample_grid.geojson')
+	grid_gdf = gpd.read_file('/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/gmm_grids/fishnet_CoV_gmm_r4_built_broadway.shp')
 	grid_gdf['id'] = grid_gdf.index
 	grid_gdf['Type'] = grid_gdf['clus_gmm'].replace(TYPES)
 	grid_gdf.loc[grid_gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
-	streets = gpd.read_file('/Volumes/ELabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/Broadway/streets_utm.shp')
+	streets = gpd.read_file('/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/COV/streets_utm_cov.shp')
 	streets['geometry'] = streets.buffer(5)
 	grid_gdf.loc[gpd.overlay(grid_gdf, streets[streets['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
 	grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
-	Grid(grid_gdf, TILES, 'data').test_grid()
-	# f'/Volumes/ELabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/City-Wide'
+	Grid(grid_gdf, TILES, 'data', land_use=gpd.read_file()).test_grid()
+	# f'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/City-Wide'

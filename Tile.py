@@ -1,5 +1,5 @@
 import pandas as pd
-from Morphology.ShapeTools import Shape
+from morphology.ShapeTools import Shape
 from shapely.affinity import scale
 
 
@@ -10,14 +10,7 @@ class Tile:
 		for layer, gdf in zip(['buildings', 'parcels', 'network', 'trees'], [buildings, parcels, network, trees]):
 			assert len(gdf) > 0, ValueError(f'Empty {layer} GeoDataFrame in {name} tile ({subtype} subtype)')
 			assert 'Subtype' in gdf.columns, KeyError(f"Subtype column not found in {layer} layer of {name} tile ({subtype} subtype)")
-			# assert subtype in list(gdf['Subtype']), KeyError(f"{subtype} subtype not found in {layer} layer of {name} tile")
 		assert len(bound) > 0, ValueError(f'Empty boundary GeodataFrame in {name} tile ({subtype} subtype)')
-
-		# self.buildings = buildings[buildings['Subtype'] == subtype]
-		# self.parcels = parcels[parcels['Subtype'] == subtype]
-		# self.network = network[network['Subtype'] == subtype]
-		# self.trees = trees[trees['Subtype'] == subtype]
-		# self.bound = bound[bound['Subtype'] == subtype]
 
 		self.buildings = buildings
 		self.parcels = parcels
