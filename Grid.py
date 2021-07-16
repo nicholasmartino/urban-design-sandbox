@@ -134,6 +134,7 @@ class Grid:
 		# Get majority of real place land use within the cell
 		in_cell_lu = gpd.overlay(real_land_use_gdf, gdf.loc[[cell_i], :].copy())
 		in_cell_lu = in_cell_lu[in_cell_lu['elab_lu'].isin(land_uses)].copy()
+		in_cell_lu['area'] = in_cell_lu.area
 		if len(in_cell_lu) > 0:
 			return list(in_cell_lu.groupby('elab_lu').sum().sort_values(by='area', ascending=False).index)[0]
 
