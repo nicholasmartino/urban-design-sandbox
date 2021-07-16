@@ -124,21 +124,35 @@ class Grid:
 		gdf.to_file('del_grid.geojson', driver='GeoJSON')
 		return gdf
 
+	def get_real_place_land_use(self, land_uses):
+		real_land_use_gdf = self.land_use[self.land_use['elab_lu'].isin(land_uses)].copy()
+		real_land_use_gdf['area'] = real_land_use_gdf.area
+		return real_land_use_gdf
+
+	def get_majority_land_use_in_cell(self, real_land_use_gdf, cell_i, land_uses):
+		gdf = self.gdf.copy()
+		# Get majority of real place land use within the cell
+		in_cell_lu = gpd.overlay(real_land_use_gdf, gdf.loc[[cell_i], :].copy())
+		in_cell_lu = in_cell_lu[in_cell_lu['elab_lu'].isin(land_uses)].copy()
+		if len(in_cell_lu) > 0:
+			return list(in_cell_lu.groupby('elab_lu').sum().sort_values(by='area', ascending=False).index)[0]
+
 	def assign_subtypes_by_landuse(self):
 		gdf = self.gdf.copy()
-		real_land_use_gdf = self.land_use[self.land_use['elab_lu'].isin(['CM', 'IND', 'CV'])].copy()
-		real_land_use_gdf['area'] = real_land_use_gdf.area
+		real_land_use_gdf_1 = self.get_real_place_land_use(['CV', 'CM', 'IND'])
+		real_land_use_gdf_2 = self.get_real_place_land_use(['SFD', 'MFL'])
 
 		for i in tqdm(gdf.index):
 			if gdf.loc[i, 'Type'] in ['Open_Low_Density', 'Coarse_Grain']:
-				# Get majority of real place land use within the cell
-				in_cell_lu = gpd.overlay(real_land_use_gdf, gdf.loc[[i], :].copy())
-				in_cell_lu = in_cell_lu[in_cell_lu['elab_lu'].isin(['CV', 'CM', 'IND'])].copy()
-				if len(in_cell_lu) > 0:
-					larger_use = list(in_cell_lu.groupby('elab_lu').sum().sort_values(by='area', ascending=False).index)[0]
+					larger_use = self.get_majority_land_use_in_cell(real_land_use_gdf_1, i, ['CV', 'CM', 'IND'])
 					if larger_use == 'CV': self.gdf.loc[i, 'Subtype'] = 'Standard'
 					elif larger_use == 'CM': self.gdf.loc[i, 'Subtype'] = 'Commercial'
 					elif larger_use == 'IND': self.gdf.loc[i, 'Subtype'] = 'Industrial'
+
+			elif gdf.loc[i, 'Type'] in ['Treed_Large_Home']:
+				larger_use = self.get_majority_land_use_in_cell(real_land_use_gdf_2, i, ['SFD', 'MFL'])
+				if larger_use == 'SFD': self.gdf.loc[i, 'Subtype'] = 'Standard'
+				elif larger_use == 'MFL': self.gdf.loc[i, 'Subtype'] = 'Multi-Family'
 
 		return gdf
 
