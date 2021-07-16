@@ -12,11 +12,11 @@ class Tile:
 			assert 'Subtype' in gdf.columns, KeyError(f"Subtype column not found in {layer} layer of {name} tile ({subtype} subtype)")
 		assert len(bound) > 0, ValueError(f'Empty boundary GeodataFrame in {name} tile ({subtype} subtype)')
 
-		self.buildings = buildings
-		self.parcels = parcels
-		self.network = network
-		self.trees = trees
-		self.bound = bound
+		self.buildings = buildings.copy()
+		self.parcels = parcels.copy()
+		self.network = network.copy()
+		self.trees = trees.copy()
+		self.bound = bound.copy()
 		self.all_layers = pd.concat([buildings, parcels, network, trees]).reset_index(drop=True)
 		self.subtype = subtype
 
