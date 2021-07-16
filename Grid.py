@@ -144,10 +144,10 @@ class Grid:
 
 		for i in tqdm(gdf.index):
 			if gdf.loc[i, 'Type'] in ['Open_Low_Density', 'Coarse_Grain']:
-					larger_use = self.get_majority_land_use_in_cell(real_land_use_gdf_1, i, ['CV', 'CM', 'IND'])
-					if larger_use == 'CV': self.gdf.loc[i, 'Subtype'] = 'Standard'
-					elif larger_use == 'CM': self.gdf.loc[i, 'Subtype'] = 'Commercial'
-					elif larger_use == 'IND': self.gdf.loc[i, 'Subtype'] = 'Industrial'
+				larger_use = self.get_majority_land_use_in_cell(real_land_use_gdf_1, i, ['CV', 'CM', 'IND'])
+				if larger_use == 'CV': self.gdf.loc[i, 'Subtype'] = 'Standard'
+				elif larger_use == 'CM': self.gdf.loc[i, 'Subtype'] = 'Commercial'
+				elif larger_use == 'IND': self.gdf.loc[i, 'Subtype'] = 'Industrial'
 
 			elif gdf.loc[i, 'Type'] in ['Treed_Large_Home']:
 				larger_use = self.get_majority_land_use_in_cell(real_land_use_gdf_2, i, ['SFD', 'MFL'])
