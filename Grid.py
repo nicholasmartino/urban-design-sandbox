@@ -9,11 +9,13 @@ from shapely.affinity import scale
 
 
 class Grid:
-	def __init__(self, gdf, tiles, directory='', land_use=None):
+	def __init__(self, gdf, tiles, directory='', prefix='', land_use=None, diagonal_gdf=None):
 		self.gdf = gdf
 		self.tiles = tiles
 		self.directory = directory
 		self.land_use = land_use
+		self.diagonal_gdf = diagonal_gdf
+		self.prefix = prefix
 
 	def assert_type_column(self):
 		assert 'Type' in self.gdf.columns, KeyError("Type column not found in gdf")
@@ -144,16 +146,22 @@ class Grid:
 		real_land_use_gdf_2 = self.get_real_place_land_use(['SFD', 'MFL'])
 
 		for i in tqdm(gdf.index):
-			if gdf.loc[i, 'Type'] in ['Open_Low_Density', 'Coarse_Grain']:
+			if gdf.loc[i, 'Type'] in ['Open_Low_Density']:
 				larger_use = self.get_majority_land_use_in_cell(real_land_use_gdf_1, i, ['CV', 'CM', 'IND'])
-				if larger_use == 'CV': self.gdf.loc[i, 'Subtype'] = 'Standard'
-				elif larger_use == 'CM': self.gdf.loc[i, 'Subtype'] = 'Commercial'
-				elif larger_use == 'IND': self.gdf.loc[i, 'Subtype'] = 'Industrial'
+				if larger_use == 'CV': gdf.loc[i, 'Subtype'] = 'Standard'
+				elif larger_use == 'CM': gdf.loc[i, 'Subtype'] = 'Commercial'
+				elif larger_use == 'IND': gdf.loc[i, 'Subtype'] = 'Industrial'
 
 			elif gdf.loc[i, 'Type'] in ['Treed_Large_Home']:
 				larger_use = self.get_majority_land_use_in_cell(real_land_use_gdf_2, i, ['SFD', 'MFL'])
-				if larger_use == 'SFD': self.gdf.loc[i, 'Subtype'] = 'Standard'
-				elif larger_use == 'MFL': self.gdf.loc[i, 'Subtype'] = 'Multi-Family'
+				if larger_use == 'SFD': gdf.loc[i, 'Subtype'] = 'Standard'
+				elif larger_use == 'MFL': gdf.loc[i, 'Subtype'] = 'Multi-Family'
+
+		if self.diagonal_gdf is not None:
+			self.diagonal_gdf['geometry'] = self.diagonal_gdf.buffer(1)
+			ids = gpd.overlay(gdf.loc[:, ['id', 'geometry']], self.diagonal_gdf.loc[:, ['geometry']])['id']
+			gdf.loc[list(ids), 'Type'] = 'Mid_High_Street'
+			gdf.loc[list(ids), 'Subtype'] = 'Diagonal'
 
 		return gdf
 
@@ -181,6 +189,7 @@ class Grid:
 		veg = gpd.GeoDataFrame()
 
 		# Iterate over tiles
+		all_layers = gpd.GeoDataFrame()
 		for tile in tqdm(self.tiles):
 
 			# Filter centroids of subtype
@@ -193,11 +202,15 @@ class Grid:
 				pcl = pd.concat([pcl, tile.all_layers[tile.all_layers['Type'] == 'prcls']])
 				net = pd.concat([net, tile.all_layers[tile.all_layers['Type'] == 'ntwkr']])
 				veg = pd.concat([veg, tile.all_layers[tile.all_layers['Type'] == 'trees']])
+				all_layers = pd.concat([all_layers, tile.all_layers])
 
-		if len(bld) > 0: bld.to_file(f'{self.directory}/buildings.shp')
-		if len(pcl) > 0: pcl.to_file(f'{self.directory}/parcels.shp')
-		if len(net) > 0: net.to_file(f'{self.directory}/network.shp')
-		if len(veg) > 0: veg.to_file(f'{self.directory}/trees.shp')
+		if len(bld) > 0: bld.to_file(f'{self.directory}/{self.prefix}buildings.shp')
+		if len(pcl) > 0: pcl.to_file(f'{self.directory}/{self.prefix}parcels.shp')
+		if len(net) > 0: net.to_file(f'{self.directory}/{self.prefix}network.shp')
+		if len(veg) > 0: veg.to_file(f'{self.directory}/{self.prefix}trees.shp')
+		all_layers = all_layers.reset_index(drop=True).drop('id', axis=1).dropna(how='all')
+		all_layers.to_file(f'{self.directory}/{self.prefix}all_tiles.geojson', driver='GeoJSON')
+		all_layers.to_crs(4326).to_file(f'{self.directory}/{self.prefix}all_tiles4326.geojson', driver='GeoJSON')
 		return
 
 	def test_place_tiles(self):
@@ -227,13 +240,20 @@ if __name__ == '__main__':
 		10: 'Typical_Van_SF',
 		11: 'Typical_Van_West_SF'
 	}
-	grid_gdf = gpd.read_file('/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/gmm_grids/fishnet_CoV_gmm_r4_built_broadway.shp')
-	grid_gdf['id'] = grid_gdf.index
-	grid_gdf['Type'] = grid_gdf['clus_gmm'].replace(TYPES)
-	grid_gdf.loc[grid_gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
-	streets = gpd.read_file('/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/COV/streets_utm_cov.shp')
-	streets['geometry'] = streets.buffer(5)
-	grid_gdf.loc[gpd.overlay(grid_gdf, streets[streets['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
-	grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
-	Grid(grid_gdf, TILES, 'data', land_use=gpd.read_file('/Users/nicholasmartino/Desktop/Landuse2016/Landuse2016.shp')).test_grid()
-	# f'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/City-Wide'
+	GRID_DIR = 'data/grids'
+	GRID_FILES = ['broadway_baseline.geojson', 'broadway_e1.geojson']
+	STREETS = gpd.read_file(
+		'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/COV/streets_utm_cov.shp')
+
+	for file in GRID_FILES:
+		grid_file = f'{GRID_DIR}/{file}'
+		grid_gdf = gpd.read_file(grid_file)
+		grid_gdf['id'] = grid_gdf.index
+		grid_gdf['Type'] = grid_gdf['clus_gmm'].replace(TYPES)
+		grid_gdf.loc[grid_gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
+		STREETS['geometry'] = STREETS.buffer(5)
+		grid_gdf.loc[gpd.overlay(grid_gdf, STREETS[STREETS['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
+		grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
+		Grid(gdf=grid_gdf, tiles=TILES, directory='data/sandboxes', prefix=f"{file.split('.')[0]}_",
+		     land_use=gpd.read_file('data/mvan/Landuse2016/Landuse2016.shp'),
+		     diagonal_gdf=gpd.read_file('data/diagonal_tiles.geojson')).test_grid()

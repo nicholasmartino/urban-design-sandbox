@@ -25,11 +25,12 @@ class Indicators:
 		gdf['far'] = gdf['floor_area']/gdf['area']
 		return gdf
 
-	def get_residential_units(self, unit_area=800):
+	def get_residential_units(self, unit_area=270):
 		gdf = self.buildings.copy()
 		gdf.loc[gdf['LANDUSE'].isin(['CM', 'CV', 'IND', 'OS']), 'res_units'] = 0
-		gdf.loc[gdf['LANDUSE'].isin(['MFL', 'MFM', 'MFH']), 'res_units'] = (gdf['floor_area']/unit_area).astype(int) * gdf['maxstories']
-		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = (gdf['floor_area']/unit_area).astype(int) * (gdf['maxstories'] - 1)
+		gdf.loc[gdf['LANDUSE'].isin(['MFL', 'MFM', 'MFH', 'SFA']), 'res_units'] = ((gdf['area']/unit_area) * gdf['maxstories']).astype(int)
+		gdf.loc[(gdf['LANDUSE'] == 'SFD') & (gdf['laneway'] == 0), 'res_units'] = 1
+		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = ((gdf['area']/unit_area) * (gdf['maxstories'] - 1)).astype(int)
 		gdf['res_units'] = gdf['res_units'].fillna(0)
 		return gdf
 
@@ -41,7 +42,7 @@ class Indicators:
 
 	def get_resident_count(self):
 		gdf = self.buildings.copy()
-		gdf['res_count'] = gdf['res_units'].astype(int) * 1.82
+		gdf['res_count'] = gdf['res_units'].astype(int) * 3
 		return gdf
 
 	def remove_buildings_from_open_spaces(self):
@@ -54,6 +55,15 @@ class Indicators:
 		gdf = self.parcels.copy()
 		return pd.DataFrame(gdf.groupby('LANDUSE').sum()['area'])
 
+	def get_floor_area_by_land_use(self):
+		gdf = self.buildings.copy()
+		return pd.DataFrame(gdf.groupby('LANDUSE').sum()['floor_area'])
+
+	def get_n_units_by_land_use(self):
+		gdf = self.buildings.copy()
+		gdf['res_units'] = gdf['res_units'].astype(int)
+		return pd.DataFrame(gdf.groupby('LANDUSE').sum()['res_units'])
+
 	def get_total_population(self):
 		gdf = self.buildings.copy()
 		return int(gdf['res_count'].sum())
@@ -61,6 +71,11 @@ class Indicators:
 	def get_total_area(self):
 		gdf = self.parcels.copy()
 		return round(gdf.unary_union.convex_hull.area, 2)
+
+	def join_land_use_from_parcels(self):
+		gdf = self.buildings.copy()
+		gdf['LANDUSE'] = gpd.sjoin(gdf, self.parcels.copy().loc[:, ['LANDUSE', 'geometry']])['LANDUSE_right']
+		return gdf
 
 	def test_indicators(self):
 		bld_cols = ['LANDUSE', 'maxstories', 'laneway']
@@ -78,34 +93,60 @@ class Indicators:
 
 		assert len(self.parcels[self.parcels['LANDUSE'] == 'OS']) > 0, AssertionError('Parcel layer has no open spaces (OS) under LANDUSE column')
 		self.buildings = self.remove_buildings_from_open_spaces()
+		self.buildings = self.join_land_use_from_parcels()
 		self.get_area_by_land_use()
 
 		return
 
 
 if __name__ == '__main__':
-	prcls = gpd.read_file('data/parcels.shp')
-	bldgs = gpd.read_file('data/buildings.shp')
+	PREFIXES = ['broadway_baseline.geojson', 'broadway_e1.geojson']
 
 	# Get open spaces from CoV open data
-	parks = gpd.read_file('https://opendata.vancouver.ca/explore/dataset/parks-polygon-representation/download/'
+	PARKS = gpd.read_file('https://opendata.vancouver.ca/explore/dataset/parks-polygon-representation/download/'
 	                      '?format=geojson&timezone=America/Los_Angeles&lang=en&').to_crs(26910)
-	prcls['pid'] = prcls.index
-	pcl = prcls.copy()
-	pcl['geometry'] = pcl.centroid
-	inters_parcels = gpd.overlay(pcl.loc[:, ['pid', 'geometry']], parks)
-	prcls.loc[prcls['pid'].isin(inters_parcels['pid']), 'LANDUSE'] = 'OS'
-	prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(5, join_style=2)
-	dissolved = Shape(prcls[prcls['LANDUSE'] == 'OS']).dissolve()
-	dissolved['LANDUSE'] = 'OS'
-	prcls = pd.concat([prcls[prcls['LANDUSE'] != 'OS'], dissolved])
-	prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(-6, join_style=2)
-	prcls = prcls.dropna(subset=['geometry']).reset_index(drop=True)
+	REAL_TREES = gpd.read_file('/Volumes/Samsung_T5/Databases/Vancouver, British Columbia.gpkg',
+	                           layer='nature_tree_canopy')
 
-	ind = Indicators(parcels=prcls, buildings=bldgs)
-	ind.test_indicators()
-	ind.parcels.to_file('data/parcels_indicator.shp')
-	ind.buildings.to_file('data/buildings_indicator.shp')
-	ind.get_area_by_land_use().to_csv('data/land_use.csv')
-	print(f"Total population: {ind.get_total_population()}")
-	print(f"Total area: {ind.get_total_area()}")
+	for prefix in PREFIXES:
+		prefix = f"{prefix.split('.')[0]}_"
+		prcls = gpd.read_file(f"data/sandboxes/{prefix}parcels.shp")
+		bldgs = gpd.read_file(f"data/sandboxes/{prefix}buildings.shp")
+
+		prcls['pid'] = prcls.index
+		pcl = prcls.copy()
+		pcl['geometry'] = pcl.centroid
+		inters_parcels = gpd.overlay(pcl.loc[:, ['pid', 'geometry']], PARKS)
+		prcls.loc[prcls['pid'].isin(inters_parcels['pid']), 'LANDUSE'] = 'OS'
+		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(5, join_style=2)
+		dissolved = Shape(prcls[prcls['LANDUSE'] == 'OS']).dissolve()
+		dissolved['LANDUSE'] = 'OS'
+		dissolved['Type'] = 'prcls'
+		prcls = pd.concat([prcls[prcls['LANDUSE'] != 'OS'], dissolved])
+		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(-6, join_style=2)
+		prcls = prcls.dropna(subset=['geometry']).reset_index(drop=True)
+
+		ind = Indicators(parcels=prcls, buildings=bldgs)
+		ind.test_indicators()
+		ind.parcels.to_file(f"data/sandboxes/{prefix}parcels_indicator.shp")
+		ind.buildings.to_file(f"data/sandboxes/{prefix}buildings_indicator.shp")
+		ind.get_area_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_area.csv')
+		ind.get_floor_area_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_floor_area.csv')
+		ind.get_n_units_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_n_units.csv')
+
+		# Get real place trees
+		REAL_TREES['real_tree_id'] = REAL_TREES.index
+		REAL_TREES['Crown_dm'] = REAL_TREES['crown_dm']
+		real_trees_copy = REAL_TREES.copy()
+		real_trees_copy['geometry'] = REAL_TREES.centroid.buffer(1)
+		overlay = gpd.overlay(real_trees_copy.loc[:, ['real_tree_id', 'geometry']], ind.parcels[ind.parcels['LANDUSE'] == 'OS'])
+		sb_trees = gpd.read_file(f'data/sandboxes/{prefix}trees.shp')
+		sb_trees = pd.concat([sb_trees, REAL_TREES[REAL_TREES['real_tree_id'].isin(list(overlay['real_tree_id']))]])
+		sb_trees['Type'] = 'trees'
+
+		all_tiles = pd.concat([ind.parcels, ind.buildings, sb_trees])
+		all_tiles.to_file(f'data/sandboxes/{prefix}all_tiles.geojson', driver='GeoJSON')
+		all_tiles.to_crs(4326).to_file(f'data/sandboxes/{prefix}all_tiles_4326.geojson', driver='GeoJSON')
+
+		print(f"Total population: {ind.get_total_population()}")
+		print(f"Total area: {ind.get_total_area()}")
