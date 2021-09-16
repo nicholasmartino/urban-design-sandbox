@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 import geopandas as gpd
 from morphology.ShapeTools import Shape, Analyst
 
@@ -99,6 +100,55 @@ class Indicators:
 		return
 
 
+class Scenario:
+	def __init__(self, parcels, buildings, real_parks, real_trees, name=''):
+		self.parcels = parcels
+		self.buildings = buildings
+		self.real_parks = real_parks
+		self.real_trees = real_trees
+		self.name = name
+		return
+
+	def extract_parks(self):
+		prcls = self.parcels.copy()
+
+		assert 'LANDUSE' in prcls.columns, KeyError("'LANDUSE' column not found in parcels GeoDataFrame")
+
+		# Extract open spaces from real place
+		prcls['pid'] = prcls.index
+		pcl = prcls.copy()
+		pcl['geometry'] = pcl.centroid
+		inters_parcels = gpd.overlay(pcl.loc[:, ['pid', 'geometry']], self.real_parks)
+		prcls.loc[prcls['pid'].isin(inters_parcels['pid']), 'LANDUSE'] = 'OS'
+		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(5, join_style=2)
+		dissolved = Shape(prcls[prcls['LANDUSE'] == 'OS']).dissolve()
+		dissolved['LANDUSE'] = 'OS'
+		dissolved['Type'] = 'prcls'
+		prcls = pd.concat([prcls[prcls['LANDUSE'] != 'OS'], dissolved])
+		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(-6, join_style=2)
+		prcls = prcls.dropna(subset=['geometry']).reset_index(drop=True)
+		return prcls
+
+	def extract_trees(self):
+		trees = self.real_trees
+
+		assert 'crown_dm' in trees.columns, KeyError("'Crown_dm' column not found in trees GeoDataFrame")
+		assert 'LANDUSE' in self.parcels.columns, KeyError("'LANDUSE' column not found in parcels GeoDataFrame")
+
+		assert os.path.exists(f'data/sandboxes/{self.name}trees.shp'), FileNotFoundError(f"'data/sandboxes/{self.name}trees.shp' file not found")
+
+		# Get real place trees
+		trees['real_tree_id'] = trees.index
+		trees['Crown_dm'] = trees['crown_dm']
+		real_trees_copy = trees.copy()
+		real_trees_copy['geometry'] = trees.centroid.buffer(1)
+		overlay = gpd.overlay(real_trees_copy.loc[:, ['real_tree_id', 'geometry']], self.parcels[self.parcels['LANDUSE'] == 'OS'])
+		sb_trees = gpd.read_file(f'data/sandboxes/{self.name}trees.shp')
+		sb_trees = pd.concat([sb_trees, trees[trees['real_tree_id'].isin(list(overlay['real_tree_id']))]])
+		sb_trees['Type'] = 'trees'
+		return sb_trees
+
+
 if __name__ == '__main__':
 	PREFIXES = ['broadway_baseline.geojson', 'broadway_e1.geojson']
 
@@ -113,36 +163,17 @@ if __name__ == '__main__':
 		prcls = gpd.read_file(f"data/sandboxes/{prefix}parcels.shp")
 		bldgs = gpd.read_file(f"data/sandboxes/{prefix}buildings.shp")
 
-		prcls['pid'] = prcls.index
-		pcl = prcls.copy()
-		pcl['geometry'] = pcl.centroid
-		inters_parcels = gpd.overlay(pcl.loc[:, ['pid', 'geometry']], PARKS)
-		prcls.loc[prcls['pid'].isin(inters_parcels['pid']), 'LANDUSE'] = 'OS'
-		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(5, join_style=2)
-		dissolved = Shape(prcls[prcls['LANDUSE'] == 'OS']).dissolve()
-		dissolved['LANDUSE'] = 'OS'
-		dissolved['Type'] = 'prcls'
-		prcls = pd.concat([prcls[prcls['LANDUSE'] != 'OS'], dissolved])
-		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(-6, join_style=2)
-		prcls = prcls.dropna(subset=['geometry']).reset_index(drop=True)
+		scn = Scenario(parcels=prcls, buildings=bldgs, real_parks=PARKS, real_trees=REAL_TREES, name=prefix)
+		scn.parcels = scn.extract_parks()
+		sb_trees = scn.extract_trees()
 
-		ind = Indicators(parcels=prcls, buildings=bldgs)
+		ind = Indicators(parcels=scn.parcels, buildings=bldgs)
 		ind.test_indicators()
 		ind.parcels.to_file(f"data/sandboxes/{prefix}parcels_indicator.shp")
 		ind.buildings.to_file(f"data/sandboxes/{prefix}buildings_indicator.shp")
 		ind.get_area_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_area.csv')
 		ind.get_floor_area_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_floor_area.csv')
 		ind.get_n_units_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_n_units.csv')
-
-		# Get real place trees
-		REAL_TREES['real_tree_id'] = REAL_TREES.index
-		REAL_TREES['Crown_dm'] = REAL_TREES['crown_dm']
-		real_trees_copy = REAL_TREES.copy()
-		real_trees_copy['geometry'] = REAL_TREES.centroid.buffer(1)
-		overlay = gpd.overlay(real_trees_copy.loc[:, ['real_tree_id', 'geometry']], ind.parcels[ind.parcels['LANDUSE'] == 'OS'])
-		sb_trees = gpd.read_file(f'data/sandboxes/{prefix}trees.shp')
-		sb_trees = pd.concat([sb_trees, REAL_TREES[REAL_TREES['real_tree_id'].isin(list(overlay['real_tree_id']))]])
-		sb_trees['Type'] = 'trees'
 
 		all_tiles = pd.concat([ind.parcels, ind.buildings, sb_trees])
 		all_tiles.to_file(f'data/sandboxes/{prefix}all_tiles.geojson', driver='GeoJSON')

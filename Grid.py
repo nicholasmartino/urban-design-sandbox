@@ -208,9 +208,9 @@ class Grid:
 		if len(pcl) > 0: pcl.to_file(f'{self.directory}/{self.prefix}parcels.shp')
 		if len(net) > 0: net.to_file(f'{self.directory}/{self.prefix}network.shp')
 		if len(veg) > 0: veg.to_file(f'{self.directory}/{self.prefix}trees.shp')
-		all_layers = all_layers.reset_index(drop=True).drop('id', axis=1).dropna(how='all')
-		all_layers.to_file(f'{self.directory}/{self.prefix}all_tiles.geojson', driver='GeoJSON')
-		all_layers.to_crs(4326).to_file(f'{self.directory}/{self.prefix}all_tiles4326.geojson', driver='GeoJSON')
+		# all_layers = all_layers.reset_index(drop=True).drop('id', axis=1).dropna(how='all')
+		# all_layers.to_file(f'{self.directory}/{self.prefix}all_tiles.geojson', driver='GeoJSON')
+		# all_layers.to_crs(4326).to_file(f'{self.directory}/{self.prefix}all_tiles4326.geojson', driver='GeoJSON')
 		return
 
 	def test_place_tiles(self):
