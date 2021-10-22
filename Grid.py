@@ -17,6 +17,8 @@ class Grid:
 		self.diagonal_gdf = diagonal_gdf
 		self.prefix = prefix
 
+		assert os.path.exists(directory), NotADirectoryError(f'{directory}')
+
 	def assert_type_column(self):
 		assert 'Type' in self.gdf.columns, KeyError("Type column not found in gdf")
 
@@ -24,7 +26,7 @@ class Grid:
 		assert 'High St' in self.gdf.columns, KeyError("High St column not found in gdf")
 
 	def assert_land_use_layer(self):
-		assert 'elab_lu' in self.land_use.columns, KeyError("elab_lu column not found in land_use layer")
+		assert 'LANDUSE' in self.land_use.columns, KeyError("LANDUSE column not found in land_use layer")
 
 	def assign_subtypes_by_adjency(self, consider_vertices=True):
 		subtypes={
@@ -122,12 +124,14 @@ class Grid:
 						if set(adj_cells['sid']) == val:
 							gdf.loc[i, 'Subtype'] = sub
 
+			gdf.at[i, 'geometry'] = gdf.loc[i, 'geometry'].buffer(-3, join_style=2)
+
 		gdf['Subtype'] = gdf['Subtype'].fillna('Standard')
 		gdf.to_file('del_grid.geojson', driver='GeoJSON')
 		return gdf
 
 	def get_real_place_land_use(self, land_uses):
-		real_land_use_gdf = self.land_use[self.land_use['elab_lu'].isin(land_uses)].copy()
+		real_land_use_gdf = self.land_use[self.land_use['LANDUSE'].isin(land_uses)].copy()
 		real_land_use_gdf['area'] = real_land_use_gdf.area
 		return real_land_use_gdf
 
@@ -135,10 +139,10 @@ class Grid:
 		gdf = self.gdf.copy()
 		# Get majority of real place land use within the cell
 		in_cell_lu = gpd.overlay(real_land_use_gdf, gdf.loc[[cell_i], :].copy())
-		in_cell_lu = in_cell_lu[in_cell_lu['elab_lu'].isin(land_uses)].copy()
+		in_cell_lu = in_cell_lu[in_cell_lu['LANDUSE'].isin(land_uses)].copy()
 		in_cell_lu['area'] = in_cell_lu.area
 		if len(in_cell_lu) > 0:
-			return list(in_cell_lu.groupby('elab_lu').sum().sort_values(by='area', ascending=False).index)[0]
+			return list(in_cell_lu.groupby('LANDUSE').sum().sort_values(by='area', ascending=False).index)[0]
 
 	def assign_subtypes_by_landuse(self):
 		gdf = self.gdf.copy()
@@ -162,7 +166,6 @@ class Grid:
 			ids = gpd.overlay(gdf.loc[:, ['id', 'geometry']], self.diagonal_gdf.loc[:, ['geometry']])['id']
 			gdf.loc[list(ids), 'Type'] = 'Mid_High_Street'
 			gdf.loc[list(ids), 'Subtype'] = 'Diagonal'
-
 		return gdf
 
 	def test_assign_subtypes(self):
@@ -187,6 +190,7 @@ class Grid:
 		pcl = gpd.GeoDataFrame()
 		net = gpd.GeoDataFrame()
 		veg = gpd.GeoDataFrame()
+		blk = gpd.GeoDataFrame()
 
 		# Iterate over tiles
 		all_layers = gpd.GeoDataFrame()
@@ -200,14 +204,22 @@ class Grid:
 				tile.all_layers = tile.move_all_layers(centroid)
 				bld = pd.concat([bld, tile.all_layers[tile.all_layers['Type'] == 'bldgs']])
 				pcl = pd.concat([pcl, tile.all_layers[tile.all_layers['Type'] == 'prcls']])
-				net = pd.concat([net, tile.all_layers[tile.all_layers['Type'] == 'ntwkr']])
+				net = pd.concat([net, tile.all_layers[tile.all_layers['Type'] == 'ntwrk']])
 				veg = pd.concat([veg, tile.all_layers[tile.all_layers['Type'] == 'trees']])
+				blk = pd.concat([blk, tile.all_layers[tile.all_layers['Type'] == 'block']])
 				all_layers = pd.concat([all_layers, tile.all_layers])
 
 		if len(bld) > 0: bld.to_file(f'{self.directory}/{self.prefix}buildings.shp')
 		if len(pcl) > 0: pcl.to_file(f'{self.directory}/{self.prefix}parcels.shp')
-		if len(net) > 0: net.to_file(f'{self.directory}/{self.prefix}network.shp')
+		if len(net) > 0:
+			grid_bnd = grid.copy()
+			grid_bnd['geometry'] = grid_bnd['geometry'].boundary
+			grid_bnd = Shape(grid_bnd).explode()
+			net = pd.concat([net, grid_bnd.loc[:, ['geometry']]])
+			net = net.drop_duplicates('geometry')
+			net.to_file(f'{self.directory}/{self.prefix}network.shp')
 		if len(veg) > 0: veg.to_file(f'{self.directory}/{self.prefix}trees.shp')
+		if len(blk) > 0: blk.to_file(f'{self.directory}/{self.prefix}blocks.shp')
 		# all_layers = all_layers.reset_index(drop=True).drop('id', axis=1).dropna(how='all')
 		# all_layers.to_file(f'{self.directory}/{self.prefix}all_tiles.geojson', driver='GeoJSON')
 		# all_layers.to_crs(4326).to_file(f'{self.directory}/{self.prefix}all_tiles4326.geojson', driver='GeoJSON')
@@ -238,10 +250,20 @@ if __name__ == '__main__':
 		8: 'Treed_Large_Home',
 		9: 'Dense_Nodal',
 		10: 'Typical_Van_SF',
-		11: 'Typical_Van_West_SF'
+		11: 'Typical_Van_West_SF',
+		12: 'Green_Open_Space'
 	}
+
+	# Local settings
 	GRID_DIR = 'data/grids'
-	GRID_FILES = ['broadway_baseline.geojson', 'broadway_e1.geojson']
+	GRID_FILES = ['broadway_baseline.geojson', 'dunbar_baseline.geojson', 'main_baseline.geojson',
+	              'marpole_baseline.geojson', 'sunset_baseline.geojson']
+
+	# Server settings
+	SERVER_DIR = f'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage'
+	GRID_DIR = f'{SERVER_DIR}/Data/gmm_grids'
+	GRID_FILES = ['fishnet_CoV_gmm_r4_built.shp']
+
 	STREETS = gpd.read_file(
 		'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/COV/streets_utm_cov.shp')
 
@@ -254,6 +276,6 @@ if __name__ == '__main__':
 		STREETS['geometry'] = STREETS.buffer(5)
 		grid_gdf.loc[gpd.overlay(grid_gdf, STREETS[STREETS['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
 		grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
-		Grid(gdf=grid_gdf, tiles=TILES, directory='data/sandboxes', prefix=f"{file.split('.')[0]}_",
+		Grid(gdf=grid_gdf, tiles=TILES, directory=f'{SERVER_DIR}/Sandbox/shp/City-Wide', prefix=f"{file.split('.')[0]}_",
 		     land_use=gpd.read_file('data/mvan/Landuse2016/Landuse2016.shp'),
 		     diagonal_gdf=gpd.read_file('data/diagonal_tiles.geojson')).test_grid()
