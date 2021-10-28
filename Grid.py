@@ -5,6 +5,7 @@ import pandas as pd
 from Tiles import TILES
 from Tile import Tile
 from tqdm import tqdm
+from Inputs import *
 from shapely.affinity import scale
 
 
@@ -254,19 +255,6 @@ if __name__ == '__main__':
 		12: 'Green_Open_Space'
 	}
 
-	# Local settings
-	GRID_DIR = 'data/grids'
-	GRID_FILES = ['broadway_baseline.geojson', 'dunbar_baseline.geojson', 'main_baseline.geojson',
-	              'marpole_baseline.geojson', 'sunset_baseline.geojson']
-
-	# Server settings
-	SERVER_DIR = f'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage'
-	GRID_DIR = f'{SERVER_DIR}/Data/gmm_grids'
-	GRID_FILES = ['fishnet_CoV_gmm_r4_built.shp']
-
-	STREETS = gpd.read_file(
-		'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/COV/Data/COV/streets_utm_cov.shp')
-
 	for file in GRID_FILES:
 		grid_file = f'{GRID_DIR}/{file}'
 		grid_gdf = gpd.read_file(grid_file)
@@ -276,6 +264,6 @@ if __name__ == '__main__':
 		STREETS['geometry'] = STREETS.buffer(5)
 		grid_gdf.loc[gpd.overlay(grid_gdf, STREETS[STREETS['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
 		grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
-		Grid(gdf=grid_gdf, tiles=TILES, directory=f'{SERVER_DIR}/Sandbox/shp/City-Wide', prefix=f"{file.split('.')[0]}_",
+		Grid(gdf=grid_gdf, tiles=TILES, directory=OUT_DIR, prefix=f"{file.split('.')[0]}_",
 		     land_use=gpd.read_file('data/mvan/Landuse2016/Landuse2016.shp'),
 		     diagonal_gdf=gpd.read_file('data/diagonal_tiles.geojson')).test_grid()

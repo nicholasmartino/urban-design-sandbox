@@ -4,7 +4,8 @@ import sys
 import geopandas as gpd
 import pandas as pd
 from morphology.ShapeTools import Shape, Analyst
-
+import numpy as np
+from Inputs import *
 sys.path.append('/Users/nicholasmartino/Google Drive/Python/urban-zoning')
 from City.Network import Streets
 
@@ -33,15 +34,30 @@ class Indicators:
 		gdf['far'] = gdf['floor_area']/gdf['area']
 		return gdf
 
-	def get_residential_units(self, unit_area=270):
+	def get_residential_units(self):
 		gdf = self.buildings.copy()
 		gdf['maxstories'] = gdf['maxstories'].fillna(0)
 
+		# Set average unit area by cell type
+		sqft_sqm = 10.76391
+		gdf.loc[(gdf['cell_type'] == 'Open_Low_Density') & (gdf['laneway'] != '1'), 'unit_area'] = 2257/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Mid_High_Street') & (gdf['laneway'] != '1'), 'unit_area'] = 1441/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Coarse_Grain') & (gdf['laneway'] != '1'), 'unit_area'] = 2194/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Moderate_Density') & (gdf['laneway'] != '1'), 'unit_area'] = 1396/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Treed_Large_Home') & (gdf['laneway'] != '1'), 'unit_area'] = 2468/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Dense_Nodal') & (gdf['laneway'] != '1'), 'unit_area'] = 1474/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Typical_Van_SF') & (gdf['laneway'] != '1'), 'unit_area'] = 1537/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Typical_Van_West_SF') & (gdf['laneway'] != '1'), 'unit_area'] = 2058/sqft_sqm
+		gdf['unit_area'] = gdf['unit_area'].fillna(0).replace(-np.inf, 0)
+		gdf['unit_area'] = gdf['unit_area'] * 1.1
+		# Numbers from BC Assessment: Average TOTAL_FINISHED_AREA
+
 		gdf.loc[gdf['LANDUSE'].isin(['CM', 'CV', 'IND', 'OS']), 'res_units'] = 0
-		gdf.loc[gdf['LANDUSE'].isin(['MFL', 'MFM', 'MFH', 'SFA']), 'res_units'] = ((gdf['area']/unit_area) * gdf['maxstories']).astype(int)
+		gdf.loc[gdf['LANDUSE'].isin(['MFL', 'MFM', 'MFH', 'SFA']), 'res_units'] = (
+				(gdf['area']/gdf['unit_area']) * gdf['maxstories']).fillna(0).replace(np.inf, 0).astype(int)
 		gdf.loc[(gdf['LANDUSE'] == 'SFD') & (gdf['laneway'] == 0), 'res_units'] = 1
-		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = ((gdf['area']/unit_area) * (gdf['maxstories'] - 1)).astype(int)
-		gdf['res_units'] = gdf['res_units'].fillna(0)
+		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = ((gdf['area']/gdf['unit_area']) * (gdf['maxstories'] - 1)).fillna(0).replace(-np.inf, 0).astype(int)
+		gdf['res_units'] = gdf['res_units'].fillna(0).astype(int)
 		return gdf
 
 	def get_commercial_units(self, unit_area=100):
@@ -54,7 +70,15 @@ class Indicators:
 
 	def get_resident_count(self):
 		gdf = self.buildings.copy()
-		gdf['res_count'] = gdf['res_units'].astype(int) * 3
+		gdf.loc[gdf['cell_type'] == 'Open_Low_Density', 'res_count'] = 2.098 * gdf.loc[gdf['cell_type'] == 'Open_Low_Density', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Mid_High_Street', 'res_count'] = 1.967 * gdf.loc[gdf['cell_type'] == 'Mid_High_Street', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Coarse_Grain', 'res_count'] = 1.753 * gdf.loc[gdf['cell_type'] == 'Coarse_Grain', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Moderate_Density', 'res_count'] = 1.894 * gdf.loc[gdf['cell_type'] == 'Moderate_Density', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Treed_Large_Home', 'res_count'] = 1.929 * gdf.loc[gdf['cell_type'] == 'Treed_Large_Home', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Dense_Nodal', 'res_count'] = 1.653 * gdf.loc[gdf['cell_type'] == 'Dense_Nodal', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Typical_Van_SF', 'res_count'] = 2.404 * gdf.loc[gdf['cell_type'] == 'Typical_Van_SF', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Typical_Van_West_SF', 'res_count'] = 2.307 * gdf.loc[gdf['cell_type'] == 'Typical_Van_West_SF', 'res_units']
+		# Numbers from census canada dissemination areas: Average people per dwelling (Population, 2016 / n_dwellings)
 		return gdf
 
 	def remove_buildings_from_open_spaces(self):
@@ -202,13 +226,13 @@ class Scenario:
 		prcls = prcls.dropna(subset=['geometry']).reset_index(drop=True)
 		return prcls
 
-	def extract_trees(self):
+	def extract_trees(self, directory=''):
 		trees = self.real_trees
 
 		assert 'crown_dm' in trees.columns, KeyError("'Crown_dm' column not found in trees GeoDataFrame")
 		assert 'LANDUSE' in self.parcels.columns, KeyError("'LANDUSE' column not found in parcels GeoDataFrame")
 
-		assert os.path.exists(f'data/sandboxes/{self.name}trees.shp'), FileNotFoundError(f"'data/sandboxes/{self.name}trees.shp' file not found")
+		assert os.path.exists(f'{directory}/{self.name}trees.shp'), FileNotFoundError(f"'{directory}/{self.name}trees.shp' file not found")
 
 		# Get real place trees
 		trees['real_tree_id'] = trees.index
@@ -216,15 +240,13 @@ class Scenario:
 		real_trees_copy = trees.copy()
 		real_trees_copy['geometry'] = trees.centroid.buffer(1)
 		overlay = gpd.overlay(real_trees_copy.loc[:, ['real_tree_id', 'geometry']], self.parcels[self.parcels['LANDUSE'] == 'OS'])
-		sb_trees = gpd.read_file(f'data/sandboxes/{self.name}trees.shp')
+		sb_trees = gpd.read_file(f'{directory}/{self.name}trees.shp')
 		sb_trees = pd.concat([sb_trees, trees[trees['real_tree_id'].isin(list(overlay['real_tree_id']))]])
 		sb_trees['Type'] = 'trees'
 		return sb_trees
 
 
 if __name__ == '__main__':
-	PREFIXES = ['broadway_baseline.geojson', 'dunbar_baseline.geojson', 'main_baseline.geojson',
-	            'marpole_baseline.geojson', 'sunset_baseline.geojson']
 
 	# Get open spaces from CoV open data
 	PARKS = gpd.read_file('https://opendata.vancouver.ca/explore/dataset/parks-polygon-representation/download/'
@@ -232,36 +254,36 @@ if __name__ == '__main__':
 	REAL_TREES = gpd.read_file('/Volumes/Samsung_T5/Databases/Vancouver, British Columbia.gpkg',
 	                           layer='nature_tree_canopy')
 
-	for prefix in PREFIXES:
+	for prefix in GRID_FILES:
 		prefix = f"{prefix.split('.')[0]}_"
 		print(f"\n {prefix}")
-		prcls = gpd.read_file(f"data/sandboxes/{prefix}parcels.shp")
-		bldgs = gpd.read_file(f"data/sandboxes/{prefix}buildings.shp")
-		strts = gpd.read_file(f"data/sandboxes/{prefix}network.shp")
-		blcks = gpd.read_file(f"data/sandboxes/{prefix}blocks.shp")
+		prcls = gpd.read_file(f"{OUT_DIR}/{prefix}parcels.shp")
+		bldgs = gpd.read_file(f"{OUT_DIR}/{prefix}buildings.shp")
+		strts = gpd.read_file(f"{OUT_DIR}/{prefix}network.shp")
+		blcks = gpd.read_file(f"{OUT_DIR}/{prefix}blocks.shp")
 
 		scn = Scenario(parcels=prcls, buildings=bldgs, real_parks=PARKS, real_trees=REAL_TREES, name=prefix)
 		scn.parcels = scn.extract_parks()
-		sb_trees = scn.extract_trees()
+		sb_trees = scn.extract_trees(directory=OUT_DIR)
 
 		ind = Indicators(parcels=scn.parcels, buildings=bldgs, streets=strts, blocks=blcks)
 		ind.test_indicators()
-		ind.parcels.to_file(f"data/sandboxes/{prefix}parcels_indicator.shp")
-		ind.buildings.to_file(f"data/sandboxes/{prefix}buildings_indicator.shp")
-		ind.get_area_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_area.csv')
-		ind.get_floor_area_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_floor_area.csv')
-		ind.get_n_units_by_land_use().to_csv(f'data/sandboxes/{prefix}land_use_n_units.csv')
+		ind.parcels.to_file(f"{OUT_DIR}/{prefix}parcels_indicator.shp")
+		ind.buildings.to_file(f"{OUT_DIR}/{prefix}buildings_indicator.shp")
+		ind.get_area_by_land_use().to_csv(f'{OUT_DIR}/{prefix}land_use_area.csv')
+		ind.get_floor_area_by_land_use().to_csv(f'{OUT_DIR}/{prefix}land_use_floor_area.csv')
+		ind.get_n_units_by_land_use().to_csv(f'{OUT_DIR}/{prefix}land_use_n_units.csv')
 		print(f"Intersection count: {ind.get_intersection_count()}")
 		stt = ind.get_street_length()
-		stt.loc[:, ["length", "geometry"]].to_file(f'data/sandboxes/{prefix}network_indicator.shp')
-		stt.loc[:, ["length"]].to_csv(f'data/sandboxes/{prefix}street_length.csv')
+		# stt.loc[:, ["length", "geometry"]].to_file(f'{OUT_DIR}/{prefix}network_indicator.shp')
+		stt.loc[:, ["length"]].to_csv(f'{OUT_DIR}/{prefix}street_length.csv')
 		blocks = ind.get_block_area()
-		blocks.to_csv(f'data/sandboxes/{prefix}block_area.csv')
-		blocks.to_file(f'data/sandboxes/{prefix}blocks_indicator.shp')
+		blocks.to_csv(f'{OUT_DIR}/{prefix}block_area.csv')
+		# blocks.to_file(f'{OUT_DIR}/{prefix}blocks_indicator.shp')
 
 		all_tiles = pd.concat([ind.parcels, ind.buildings, sb_trees])
-		all_tiles.to_file(f'data/sandboxes/{prefix}all_tiles.geojson', driver='GeoJSON')
-		all_tiles.to_crs(4326).to_file(f'data/sandboxes/{prefix}all_tiles_4326.geojson', driver='GeoJSON')
+		all_tiles.to_file(f'{OUT_DIR}/{prefix}all_tiles.geojson', driver='GeoJSON')
+		# all_tiles.to_crs(4326).to_file(f'{OUT_DIR}/{prefix}all_tiles_4326.geojson', driver='GeoJSON')
 
 		print(f"Total population: {ind.get_total_population()}")
 		print(f"Total area: {ind.get_total_area()}")
