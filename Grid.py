@@ -240,30 +240,3 @@ class Grid:
 		self.test_assign_subtypes()
 		self.test_place_tiles()
 		return
-
-
-if __name__ == '__main__':
-	TYPES = {
-		2: 'Open_Low_Density',
-		3: 'Mid_High_Street',
-		4: 'Coarse_Grain',
-		5: 'Moderate_Density',
-		8: 'Treed_Large_Home',
-		9: 'Dense_Nodal',
-		10: 'Typical_Van_SF',
-		11: 'Typical_Van_West_SF',
-		12: 'Green_Open_Space'
-	}
-
-	for file in GRID_FILES:
-		grid_file = f'{GRID_DIR}/{file}'
-		grid_gdf = gpd.read_file(grid_file)
-		grid_gdf['id'] = grid_gdf.index
-		grid_gdf['Type'] = grid_gdf['clus_gmm'].replace(TYPES)
-		grid_gdf.loc[grid_gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
-		STREETS['geometry'] = STREETS.buffer(5)
-		grid_gdf.loc[gpd.overlay(grid_gdf, STREETS[STREETS['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
-		grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
-		Grid(gdf=grid_gdf, tiles=TILES, directory=OUT_DIR, prefix=f"{file.split('.')[0]}_",
-		     land_use=gpd.read_file('data/mvan/Landuse2016/Landuse2016.shp'),
-		     diagonal_gdf=gpd.read_file('data/diagonal_tiles.geojson')).test_grid()

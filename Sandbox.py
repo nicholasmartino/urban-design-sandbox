@@ -7,6 +7,7 @@ from morphology.ShapeTools import Shape, Analyst
 import numpy as np
 from Inputs import *
 sys.path.append('/Users/nicholasmartino/Google Drive/Python/urban-zoning')
+sys.path.append('G:/My Drive/Python/urban-zoning')
 from City.Network import Streets
 
 
@@ -246,44 +247,3 @@ class Scenario:
 		return sb_trees
 
 
-if __name__ == '__main__':
-
-	# Get open spaces from CoV open data
-	PARKS = gpd.read_file('https://opendata.vancouver.ca/explore/dataset/parks-polygon-representation/download/'
-	                      '?format=geojson&timezone=America/Los_Angeles&lang=en&').to_crs(26910)
-	REAL_TREES = gpd.read_file('/Volumes/Samsung_T5/Databases/Vancouver, British Columbia.gpkg',
-	                           layer='nature_tree_canopy')
-
-	for prefix in GRID_FILES:
-		prefix = f"{prefix.split('.')[0]}_"
-		print(f"\n {prefix}")
-		prcls = gpd.read_file(f"{OUT_DIR}/{prefix}parcels.shp")
-		bldgs = gpd.read_file(f"{OUT_DIR}/{prefix}buildings.shp")
-		strts = gpd.read_file(f"{OUT_DIR}/{prefix}network.shp")
-		blcks = gpd.read_file(f"{OUT_DIR}/{prefix}blocks.shp")
-
-		scn = Scenario(parcels=prcls, buildings=bldgs, real_parks=PARKS, real_trees=REAL_TREES, name=prefix)
-		scn.parcels = scn.extract_parks()
-		sb_trees = scn.extract_trees(directory=OUT_DIR)
-
-		ind = Indicators(parcels=scn.parcels, buildings=bldgs, streets=strts, blocks=blcks)
-		ind.test_indicators()
-		ind.parcels.to_file(f"{OUT_DIR}/{prefix}parcels_indicator.shp")
-		ind.buildings.to_file(f"{OUT_DIR}/{prefix}buildings_indicator.shp")
-		ind.get_area_by_land_use().to_csv(f'{OUT_DIR}/{prefix}land_use_area.csv')
-		ind.get_floor_area_by_land_use().to_csv(f'{OUT_DIR}/{prefix}land_use_floor_area.csv')
-		ind.get_n_units_by_land_use().to_csv(f'{OUT_DIR}/{prefix}land_use_n_units.csv')
-		print(f"Intersection count: {ind.get_intersection_count()}")
-		stt = ind.get_street_length()
-		# stt.loc[:, ["length", "geometry"]].to_file(f'{OUT_DIR}/{prefix}network_indicator.shp')
-		stt.loc[:, ["length"]].to_csv(f'{OUT_DIR}/{prefix}street_length.csv')
-		blocks = ind.get_block_area()
-		blocks.to_csv(f'{OUT_DIR}/{prefix}block_area.csv')
-		# blocks.to_file(f'{OUT_DIR}/{prefix}blocks_indicator.shp')
-
-		all_tiles = pd.concat([ind.parcels, ind.buildings, sb_trees])
-		all_tiles.to_file(f'{OUT_DIR}/{prefix}all_tiles.geojson', driver='GeoJSON')
-		# all_tiles.to_crs(4326).to_file(f'{OUT_DIR}/{prefix}all_tiles_4326.geojson', driver='GeoJSON')
-
-		print(f"Total population: {ind.get_total_population()}")
-		print(f"Total area: {ind.get_total_area()}")

@@ -1,7 +1,8 @@
 import geopandas as gpd
 from Tile import Tile
+from Inputs import SERVER_DIR
 
-DIR = '/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/elementslab/Version_3'
+DIR = f'{SERVER_DIR}/Sandbox/shp/elementslab/Version_3'
 TILE_GDF = gpd.read_file(f'{DIR}/all_tiles.shp').to_crs(26910)
 # TREE_GDF = gpd.read_file('/Volumes/Macintosh HD/Users/nicholasmartino/Google Drive/elementslab/sandbox_tiles_trees.geojson')
 NET_GDF = gpd.read_file(f'{DIR}/Tiles_Network.shp').to_crs(26910)
