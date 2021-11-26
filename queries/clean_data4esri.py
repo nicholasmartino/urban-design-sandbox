@@ -1,8 +1,8 @@
 import pandas as pd
 import geopandas as gpd
 
-directory = '/Volumes/team/SALA/Research/eLabs/50_projects/22_ESRI_Dashboard/Data'
-layers = {
+DIRECTORY = '/Volumes/SALA/Research/eLabs/50_projects/22_ESRI_Dashboard/Data'
+LAYERS = {
 	'Prince George.gdb': {
 		'E0': 's_200326_jk_udes_E0_2020_BLDGS',
 		'E1': 's_200316_jk_E7_2050_PPOLICY_BLDGS_tech_shell',
@@ -27,7 +27,7 @@ layers = {
 		'E3': 's_jk_200808_HQ_E3_2040_BLDGS_1'
 	}
 }
-columns = {
+COLUMNS = {
 	'landuse': ['landuse', 'LANDUSE', 'Landuse', 'landuse_2'],
 	'total_kwh': ['total_kWh'],
 	'total_gj': ['total_GJ'],
@@ -42,24 +42,25 @@ columns = {
 	'res_units': ['res_units', 'n_res_unit'],
 	'floor_area': ['floor_area', 'TFA'],
 	'mx_stories': ['maxstories'],
-	'height': ['Height', 'Building_Height', 'height', 'BuidlingHeight', 'building_h']
+	'height': ['Height', 'Building_Height', 'height', 'BuidlingHeight', 'building_h'],
+	'laneway': ['laneway'],
 }
 
 if __name__ == '__main__':
 	gdfs = gpd.GeoDataFrame()
-	for city, experiments in layers.items():
+	for city, experiments in LAYERS.items():
 		for experiment, layer in experiments.items():
-			gdf = gpd.read_file(f'{directory}/{city}', layer=layer)
+			gdf = gpd.read_file(f'{DIRECTORY}/{city}', layer=layer)
 			gdf['city'] = city
 			gdf['experiment'] = experiment
-			for new, old_columns in columns.items():
+			for new, old_columns in COLUMNS.items():
 				common_cols = set(old_columns).intersection(set(gdf.columns))
 				assert len(common_cols) > 0, AssertionError(f"No {new} data for {layer} layer in {city} database")
 				for old in old_columns:
 					if old in gdf.columns:
 						gdf[new] = gdf[old]
 			gdfs = pd.concat([gdfs, gdf])
-	gdfs = gdfs.loc[:, list(columns.keys()) + ['geometry']]
+	gdfs = gdfs.loc[:, list(COLUMNS.keys()) + ['geometry']]
 
 	# Rename land use
 	rename = {
@@ -68,10 +69,11 @@ if __name__ == '__main__':
 		'RS_SF_A': 'SFA',
 		'RS_MF_H': 'MFH'
 	}
-	gdfs = gdfs.rename(rename)
+	gdfs = gdfs.replace(rename)
 
 	# Check for null values
 	for col in gdfs.columns:
 		nulls = gdfs[col].isna().sum()
 		if nulls > 0:
 			print(f"{nulls} null values in {col} column")
+	gdfs.to_file(f"{DIRECTORY}/buildings.shp", driver='ESRI Shapefile')

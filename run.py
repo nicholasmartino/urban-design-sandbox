@@ -4,19 +4,7 @@ from Grid import Grid
 from Inputs import *
 from Sandbox import Scenario, Indicators
 from Tiles import TILES
-
-
-TYPES = {
-	2: 'Open_Low_Density',
-	3: 'Mid_High_Street',
-	4: 'Coarse_Grain',
-	5: 'Moderate_Density',
-	8: 'Treed_Large_Home',
-	9: 'Dense_Nodal',
-	10: 'Typical_Van_SF',
-	11: 'Typical_Van_West_SF',
-	12: 'Green_Open_Space'
-}
+from Inputs import TYPES
 
 for file in GRID_FILES:
 	grid_file = f'{GRID_DIR}/{file}'

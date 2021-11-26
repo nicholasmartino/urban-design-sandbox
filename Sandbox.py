@@ -3,7 +3,7 @@ import sys
 
 import geopandas as gpd
 import pandas as pd
-from morphology.ShapeTools import Shape, Analyst
+from ShapeTools import Shape, Analyst
 import numpy as np
 from Inputs import *
 sys.path.append('/Users/nicholasmartino/Google Drive/Python/urban-zoning')
@@ -12,7 +12,7 @@ from City.Network import Streets
 
 
 class Indicators:
-	def __init__(self, parcels, buildings, streets, blocks):
+	def __init__(self, parcels=None, buildings=None, streets=None, blocks=None):
 		parcels['pid'] = parcels.index
 		buildings['bid'] = buildings.index
 		self.parcels = parcels
@@ -100,7 +100,7 @@ class Indicators:
 
 	def get_area_by_land_use(self):
 		gdf = self.parcels.copy()
-		return pd.DataFrame(gdf.groupby('LANDUSE').sum()['area'])
+		return pd.DataFrame(gdf.groupby('LANDUSE', as_index=False).sum()['area'])
 
 	def get_floor_area_by_land_use(self):
 		gdf = self.buildings.copy()
@@ -183,11 +183,13 @@ class Indicators:
 		assert 'LANDUSE' in self.parcels.columns, KeyError('LANDUSE column not found in parcels layer')
 		assert 'pid' in self.parcels.columns, KeyError('pid column not found in parcels layer')
 
+		print("Extracting indicators")
 		self.buildings = self.get_buildings_floor_area()
 		self.parcels = self.get_parcel_far()
 		self.buildings = self.get_residential_units()
 		self.buildings = self.get_commercial_units()
 		self.buildings = self.get_resident_count()
+		print("Indicators successfully extracted")
 
 		assert len(self.parcels[self.parcels['LANDUSE'] == 'OS']) > 0, AssertionError('Parcel layer has no open spaces (OS) under LANDUSE column')
 		self.buildings = self.remove_buildings_from_open_spaces()
@@ -199,8 +201,9 @@ class Indicators:
 
 
 class Scenario:
-	def __init__(self, parcels, buildings, real_parks, real_trees, name=''):
+	def __init__(self, parcels, buildings, trees, real_parks, real_trees, name=''):
 		self.parcels = parcels
+		self.trees = trees
 		self.buildings = buildings
 		self.real_parks = real_parks
 		self.real_trees = real_trees
@@ -233,17 +236,13 @@ class Scenario:
 		assert 'crown_dm' in trees.columns, KeyError("'Crown_dm' column not found in trees GeoDataFrame")
 		assert 'LANDUSE' in self.parcels.columns, KeyError("'LANDUSE' column not found in parcels GeoDataFrame")
 
-		assert os.path.exists(f'{directory}/{self.name}trees.shp'), FileNotFoundError(f"'{directory}/{self.name}trees.shp' file not found")
-
 		# Get real place trees
 		trees['real_tree_id'] = trees.index
 		trees['Crown_dm'] = trees['crown_dm']
 		real_trees_copy = trees.copy()
 		real_trees_copy['geometry'] = trees.centroid.buffer(1)
 		overlay = gpd.overlay(real_trees_copy.loc[:, ['real_tree_id', 'geometry']], self.parcels[self.parcels['LANDUSE'] == 'OS'])
-		sb_trees = gpd.read_file(f'{directory}/{self.name}trees.shp')
+		sb_trees = self.trees.copy()
 		sb_trees = pd.concat([sb_trees, trees[trees['real_tree_id'].isin(list(overlay['real_tree_id']))]])
 		sb_trees['Type'] = 'trees'
 		return sb_trees
-
-

@@ -1,5 +1,5 @@
 import pandas as pd
-from morphology.ShapeTools import Shape
+from ShapeTools import Shape
 from shapely.affinity import scale
 
 

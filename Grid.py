@@ -1,5 +1,5 @@
 import os
-from morphology.ShapeTools import Shape
+from ShapeTools import Shape
 import geopandas as gpd
 import pandas as pd
 from Tiles import TILES
@@ -10,7 +10,7 @@ from shapely.affinity import scale
 
 
 class Grid:
-	def __init__(self, gdf, tiles, directory='', prefix='', land_use=None, diagonal_gdf=None):
+	def __init__(self, gdf, tiles, directory=os.getcwd(), prefix='', land_use=None, diagonal_gdf=None):
 		self.gdf = gdf
 		self.tiles = tiles
 		self.directory = directory
@@ -22,6 +22,9 @@ class Grid:
 
 	def assert_type_column(self):
 		assert 'Type' in self.gdf.columns, KeyError("Type column not found in gdf")
+
+	def assert_subtype_column(self):
+		assert 'Subtype' in self.gdf.columns, KeyError("Subtype column not found in gdf")
 
 	def assert_high_st_column(self):
 		assert 'High St' in self.gdf.columns, KeyError("High St column not found in gdf")
@@ -46,90 +49,57 @@ class Grid:
 				{0, 3, 4, 7}, {0, 1, 3, 5}, {0, 1, 4, 5}, {0, 1, 3, 4}, {0, 1, 4, 7}, {0, 3, 4, 5},
 				{0, 3, 4, 5, 7}, {0, 1, 3, 4, 5}, {0, 1, 2, 3, 4}, {1, 3, 4, 5, 6},
 				{0, 1, 3, 4, 5, 6}, {0, 1, 3, 4, 5, 7}],
-			# 'L-Middle Left': [{0, 1}, {0, 1, 2, 5}],
-			# 'L-Middle': [{1, 2}, {0, 1, 2, 6}, {0, 1, 6}, {0, 1, 2, 4, 5, 6}],
-			# 'L-Middle Down Left': [{0, 3}],
-			# 'L-Middle Down': [{2, 3}],
 			'T-Shape': [
 				{1, 2}, {0, 1, 2, 6}, {0, 1, 6}, {0, 1, 2, 4, 5, 6}, {2, 3},
 				{0, 1, 2}, {1, 2, 3}, {0, 2, 4}, {0, 1, 2, 6, 7}, {0, 1, 2, 3, 6}, {0, 1, 2, 5, 7},
 				{0, 1, 2, 3, 4, 7}, {0, 1, 2, 3, 6, 7}, {0, 1, 2, 3, 4, 5, 7}, {0, 1, 2, 3, 5, 7}, {1, 2, 3, 4, 5, 6},
 				{0, 1, 2, 3, 4, 5, 6}, {0, 1, 2, 3, 5, 6, 7}, {0, 1, 2, 3, 4, 5, 6, 7}],
-			# 'T-Shape Down': [],
 			'T-Shape Left': [
 				{0, 1}, {0, 3}, {0, 1, 2, 5}, {0, 1, 3}, {0, 2, 3}, {1, 3, 4}, {0, 1, 2, 4, 5}, {0, 2, 3, 4, 5},
 				{0, 2, 4, 6, 7}, {0, 1, 2, 3, 4, 5}, {0, 1, 2, 4, 5, 6, 7}],
 		}
 
-		# 'Vertical': [
-		# 	{1}, {3},
-		# 	{1, 2}, {3, 7}, {1, 3},
-		# 	{1, 3, 7}, {1, 3, 6}, {1, 5, 6}, {2, 3, 7}, {1, 5, 6},
-		# 	{2, 3, 4, 6}, {2, 3, 6, 7}, {1, 2, 3, 6}, {1, 2, 6, 7}, {2, 3, 5, 7},
-		# 	{2, 3, 4, 6, 7}, {1, 2, 3, 4, 7}, {1, 2, 3, 6, 7},
-		# 	{1, 2, 3, 5, 6, 7}, {1, 2, 3, 4, 6, 7}],
-
-		"""
-		subtypes={
-			'Horizontal': [{0}, {2}, {0, 2}, {0, 1, 2, 3}],
-			'Vertical Left': [{1, 3, 4}, {0, 3, 4}, {0, 1, 3, 4}, {0, 1, 2, 3, 4}],
-			'Vertical Middle': [{1}, {3}, {1, 3}],
-			'Vertical': [{1, 3}],
-			'L-Middle Left': [{0, 1}],
-			'L-Middle': [{1, 2}],
-			'L-Middle Down Left': [{0, 3}],
-			'L-Middle Down': [{2, 3}],
-			'L-Edge Left': [],
-			'L-Edge': [],
-			'L-Edge Down Left': [],
-			'L-Edge Down': [],
-			'T-Shape': [{0, 1, 2}, {1, 2, 3}],
-			'T-Shape Down': [],
-			'T-Shape Left': [{0, 1, 3}, {0, 2, 3}],
-		}
-
-		"""
-
 		self.gdf['id'] = self.gdf.index
 		gdf = self.gdf.copy()
 		type_gdf = self.gdf[self.gdf['High St'] == 1]
+		if len(type_gdf) > 0:
+			for i in tqdm(type_gdf.index):
 
-		for i in tqdm(type_gdf.index):
+				# Filter grid and buffer cells to overlay with adjacents
+				gdf.at[i, 'geometry'] = gdf.loc[i, 'geometry'].buffer(3, join_style=2)
 
-			# Filter grid and buffer cells to overlay with adjacents
-			gdf.at[i, 'geometry'] = gdf.loc[i, 'geometry'].buffer(3, join_style=2)
+				# Explode cell into segments and centroids
+				edges = Shape(Shape(gdf.loc[[i], ['geometry']]).explode()).divorce()
+				edges['geometry'] = edges.centroid
+				if consider_vertices:
+					vertices = Shape(gdf.loc[[i], ['geometry']]).extract_vertices().drop_duplicates(subset=['geometry'])
+					vertices['sid'] = range(4, 8)
+					points = pd.concat([edges, vertices]).reset_index(drop=True)
+				else:
+					points = edges.copy()
+				points['geometry'] = points.buffer(0.1)
 
-			# Explode cell into segments and centroids
-			edges = Shape(Shape(gdf.loc[[i], ['geometry']]).explode()).divorce()
-			edges['geometry'] = edges.centroid
-			if consider_vertices:
-				vertices = Shape(gdf.loc[[i], ['geometry']]).extract_vertices().drop_duplicates(subset=['geometry'])
-				vertices['sid'] = range(4, 8)
-				points = pd.concat([edges, vertices]).reset_index(drop=True)
-			else:
-				points = edges.copy()
-			points['geometry'] = points.buffer(0.1)
+				# Intersect edges and vertices with adjacent geometries
+				inters = gpd.overlay(type_gdf, points.loc[:, ['geometry', 'sid']])
+				adj_cells = type_gdf[type_gdf['id'].isin(inters['id'])].copy()
+				adj_cells['sid'] = list(inters['sid'])
 
-			# Intersect edges and vertices with adjacent geometries
-			inters = gpd.overlay(type_gdf, points.loc[:, ['geometry', 'sid']])
-			adj_cells = type_gdf[type_gdf['id'].isin(inters['id'])].copy()
-			adj_cells['sid'] = list(inters['sid'])
+				# Assign subtype based on adjacency patterns
+				if len(adj_cells) == 0:
+					gdf.loc[i, 'Subtype'] = 'Standard'
+				else:
+					# Classify subtype according to adjacent cells
+					for sub, sets in subtypes.items():
+						for val in sets:
+							if set(adj_cells['sid']) == val:
+								gdf.loc[i, 'Subtype'] = sub
 
-			# Assign subtype based on adjacency patterns
-			if len(adj_cells) == 0:
-				gdf.loc[i, 'Subtype'] = 'Standard'
-			else:
-				# Classify subtype according to adjacent cells
-				for sub, sets in subtypes.items():
-					for val in sets:
-						if set(adj_cells['sid']) == val:
-							gdf.loc[i, 'Subtype'] = sub
+				gdf.at[i, 'geometry'] = gdf.loc[i, 'geometry'].buffer(-3, join_style=2)
 
-			gdf.at[i, 'geometry'] = gdf.loc[i, 'geometry'].buffer(-3, join_style=2)
-
-		gdf['Subtype'] = gdf['Subtype'].fillna('Standard')
-		gdf.to_file('del_grid.geojson', driver='GeoJSON')
-		return gdf
+			gdf['Subtype'] = gdf['Subtype'].fillna('Standard')
+			return gdf
+		else:
+			print("No High St type found")
 
 	def get_real_place_land_use(self, land_uses):
 		real_land_use_gdf = self.land_use[self.land_use['LANDUSE'].isin(land_uses)].copy()
@@ -169,17 +139,7 @@ class Grid:
 			gdf.loc[list(ids), 'Subtype'] = 'Diagonal'
 		return gdf
 
-	def test_assign_subtypes(self):
-		assert len(self.gdf.index) == len(self.gdf.index.unique()), IndexError("Duplicated indices found")
-		self.assert_type_column()
-		self.gdf = self.assign_subtypes_by_adjency()
-		if self.land_use is not None:
-			self.assert_land_use_layer()
-			self.gdf = self.assign_subtypes_by_landuse()
-		assert sum(self.gdf['Subtype'].isna()) == 0
-		return
-
-	def place_tiles(self):
+	def place_tiles(self, export=False):
 		"""
 		Place tiles in the grid according to their type and export them to directory
 		:return:
@@ -210,20 +170,31 @@ class Grid:
 				blk = pd.concat([blk, tile.all_layers[tile.all_layers['Type'] == 'block']])
 				all_layers = pd.concat([all_layers, tile.all_layers])
 
-		if len(bld) > 0: bld.to_file(f'{self.directory}/{self.prefix}buildings.shp')
-		if len(pcl) > 0: pcl.to_file(f'{self.directory}/{self.prefix}parcels.shp')
-		if len(net) > 0:
-			grid_bnd = grid.copy()
-			grid_bnd['geometry'] = grid_bnd['geometry'].boundary
-			grid_bnd = Shape(grid_bnd).explode()
-			net = pd.concat([net, grid_bnd.loc[:, ['geometry']]])
-			net = net.drop_duplicates('geometry')
-			net.to_file(f'{self.directory}/{self.prefix}network.shp')
-		if len(veg) > 0: veg.to_file(f'{self.directory}/{self.prefix}trees.shp')
-		if len(blk) > 0: blk.to_file(f'{self.directory}/{self.prefix}blocks.shp')
+		if export:
+			if len(bld) > 0: bld.to_file(f'{self.directory}/{self.prefix}buildings.shp')
+			if len(pcl) > 0: pcl.to_file(f'{self.directory}/{self.prefix}parcels.shp')
+			if len(net) > 0:
+				grid_bnd = grid.copy()
+				grid_bnd['geometry'] = grid_bnd['geometry'].boundary
+				grid_bnd = Shape(grid_bnd).explode()
+				net = pd.concat([net, grid_bnd.loc[:, ['geometry']]])
+				net = net.drop_duplicates('geometry')
+				net.to_file(f'{self.directory}/{self.prefix}network.shp')
+			if len(veg) > 0: veg.to_file(f'{self.directory}/{self.prefix}trees.shp')
+			if len(blk) > 0: blk.to_file(f'{self.directory}/{self.prefix}blocks.shp')
 		# all_layers = all_layers.reset_index(drop=True).drop('id', axis=1).dropna(how='all')
 		# all_layers.to_file(f'{self.directory}/{self.prefix}all_tiles.geojson', driver='GeoJSON')
 		# all_layers.to_crs(4326).to_file(f'{self.directory}/{self.prefix}all_tiles4326.geojson', driver='GeoJSON')
+		return all_layers
+
+	def test_assign_subtypes(self):
+		assert len(self.gdf.index) == len(self.gdf.index.unique()), IndexError("Duplicated indices found")
+		self.assert_type_column()
+		self.gdf = self.assign_subtypes_by_adjency()
+		if self.land_use is not None:
+			self.assert_land_use_layer()
+			self.gdf = self.assign_subtypes_by_landuse()
+		assert sum(self.gdf['Subtype'].isna()) == 0
 		return
 
 	def test_place_tiles(self):
@@ -233,10 +204,10 @@ class Grid:
 		tiles = [tile.name for tile in self.tiles]
 		diff = set(self.gdf['Type'].unique()).difference(set(tiles))
 		assert len(diff) == 0, KeyError(f"{diff} type not found in Type column ({self.gdf['Type'].unique()})")
-		self.place_tiles()
-		return self
+		tiles = self.place_tiles()
+		return tiles
 
 	def test_grid(self):
 		self.test_assign_subtypes()
-		self.test_place_tiles()
-		return
+		all_layers = self.test_place_tiles().gdf
+		return all_layers
