@@ -100,7 +100,10 @@ class Indicators:
 
 	def get_area_by_land_use(self):
 		gdf = self.parcels.copy()
-		return pd.DataFrame(gdf.groupby('LANDUSE', as_index=False).sum()['area'])
+		df = pd.DataFrame(gdf.groupby('LANDUSE').sum()['area'])
+		df['LANDUSE'] = df.index
+		df = df.rename(columns={'area': 'Area (m²)', 'LANDUSE': 'Land Use'})
+		return df.reset_index(drop=True)
 
 	def get_floor_area_by_land_use(self):
 		gdf = self.buildings.copy()

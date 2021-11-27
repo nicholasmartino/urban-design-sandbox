@@ -2,13 +2,12 @@ import os.path
 import time
 
 import dash
-import dash_core_components as dcc
 import dash_html_components as html
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 import pydeck as pdk
 from dash.dependencies import Output, Input
-from dash_bootstrap_components import Col
 from dash_deck import DeckGL
 from shapely.affinity import translate
 from shapely.geometry import Polygon
@@ -18,37 +17,43 @@ from Inputs import *
 from Inputs import TYPES
 from Sandbox import Scenario, Indicators
 from Tiles import TILES
+from layout.layout import layout, GRID_FILE, types
 
-alpha = 100
 random_seed = 0
 transparent = 'rgba(255,255,255,0)'
 
+COLORS = {
+	"SFD": [255, 248, 165],
+	"SFA": [255, 237, 33],
+	"MFL": [164, 126, 0],
+	"MFM": [176, 173, 0],
+	"MFH": [92, 76, 0],
+	"MX": [255, 127, 0],
+	"IND": [128, 128, 128],
+	"CM": [200, 90, 90],
+	"CV": [100, 172, 190],
+}
+color_discrete_map = {key: f'rgb{tuple(i)}' for key, i in COLORS.items()}
+template = dict(layout=go.Layout(
+	title_font=dict(family="Avenir", size=24),
+	font=dict(family="Avenir"),
+	paper_bgcolor='rgba(0,0,0,0)',
+	plot_bgcolor='rgba(0,0,0,0)',
+))
 # Dash Leaflet parameters
 MAP_ID = "map-id"
 POLYLINE_ID = "polyline-id"
 POLYGON_ID = "polygon-id"
 dummy_pos = [0, 0]
 dlatlon2 = 1e-6  # Controls tolerance of closing click
-DIRECTORY = "/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/Tiers/GrossNewPopulation/Shp/"
-GRID_FILE = "fishned_CoV_gmm_joined.geojson"
+DIRECTORY = \
+	"/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership " \
+	"Engage/Sandbox/shp/Tiers/GrossNewPopulation/Shp/ "
 all_tiles = gpd.read_file(
 	'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership '
 	'Engage/Sandbox/shp/elementslab/Version_3/all_tiles.shp')
 
 # Define zoning layer colors
-types = {
-	'Typical Van SF': [255, 100, 100, alpha],
-	'2': [255, 100, 255, alpha],
-	'3': [100, 100, 255, alpha],
-	'4': [255, 255, 100, alpha],
-	'5': [255, 127, 100, alpha],
-	'6': [255, 127, 100, alpha],
-	'7': [255, 127, 100, alpha],
-	'8': [255, 127, 100, alpha],
-	'9': [255, 127, 100, alpha],
-	'10': [255, 127, 100, alpha],
-	'11': [255, 127, 100, alpha],
-}
 grid_gdf = gpd.read_feather('data/feather/broadway_plan_baseline.feather')
 # Get open spaces from CoV open data
 if sys.platform == 'win32':
@@ -78,8 +83,9 @@ def pick_geometry(deck, gdf, cell_id):
 		type="GeoJsonLayer",
 		data=gdf.to_crs(4326),
 		extruded=False,
-		getFillColor=[0, 0, 255, 100],
-		get_line_color=[255, 255, 255, 255],
+		opacity=0.5,
+		getFillColor=[0, 0, 255],
+		get_line_color=[255, 255, 255],
 		auto_highlight=True,
 		pickable=True,
 	)
@@ -91,11 +97,11 @@ def pick_geometry(deck, gdf, cell_id):
 
 
 # Define initial view state and create deck object
-view_state = pdk.ViewState(latitude=49.254, longitude=-123.13, zoom=11, max_zoom=16, pitch=0, bearing=0)
+view_state = pdk.ViewState(latitude=49.254, longitude=-123.13, zoom=15, max_zoom=20, pitch=0, bearing=0)
 r = pdk.Deck(
 	layers=[],
 	initial_view_state=view_state,
-	map_style=pdk.map_styles.DARK_NO_LABELS,
+	map_style=pdk.map_styles.LIGHT_NO_LABELS,
 )
 mapbox_key = "pk.eyJ1IjoibmljaG9sYXNtYXJ0aW5vIiwiYSI6ImNrMjVhOGphOTAzZGUzbG8wNHJhdTZrMmYifQ.98uDMnGIvn1zrw4ZWUO35g"
 
@@ -104,65 +110,6 @@ tooltip = {
 }
 
 html.Button(id='rotate', value='Rotate'),
-right_bar_width = 380
-layout = html.Div(
-	children=[
-		dcc.Store(id='memory'),
-		Col(
-			style={'height': '97vh', 'width': '100%', 'offset': 0, 'display': 'inline-block'},
-			children=[
-
-				# 3D Map
-				Col(
-					width={'size': 6, 'offset': 0},
-					children=[
-						html.Div(
-							id="deck_div",
-						),
-					],
-				),
-
-				# Right panel
-				Col(
-					style={'width': f'{right_bar_width}px', 'height': f'90%', 'float': 'left',
-					       'display': 'inline-block', 'font-family': 'roboto_light'},
-					className='pretty_container',
-					children=[
-						dcc.Input(id='tiles_dir', value=GRID_FILE, style={"width": "100%"}),
-						# dcc.Graph(id='sel_type_map'),
-						html.Br(),
-						html.Br(),
-						# dl.Map(id=MAP_ID, center=[49.264, -123.115], zoom=16, children=[
-						# 	dl.TileLayer(),  # Map tiles, defaults to OSM
-						# 	dl.Polyline(id=POLYLINE_ID, positions=[dummy_pos]),
-						# 	# Create a polyline, cannot be empty at the moment
-						# 	dl.Polygon(id=POLYGON_ID, positions=[dummy_pos]),
-						# 	# Create a polygon, cannot be empty at the moment
-						# ], style={'width': '100%', 'height': '62%'}),
-						html.Br(),
-						html.Button('Select', id='select', style={"width": "37%"}),
-						html.Button('Rotate', id='rotate', style={"width": "21%"}),
-						html.Button('Filp H', id='flip_h', style={"width": "21%"}),
-						html.Button('Flip V', id='flip_v', style={"width": "21%"}),
-						html.Br(),
-						dcc.Dropdown(id='type', options=[{'label': name, 'value': name} for name in types.keys()]),
-					]
-				),
-
-				# Col(style={'height': f'680px', 'display': 'inline-block', 'float': 'right',}, children=[
-				# 	# Layers menu
-				# 	Row(
-				# 		style={'width': f'{right_bar_width / 2}px', 'display': 'inline-block'},
-				# 		children=[
-				# 			html.Button(id='get_shp', value='SHP'),
-				# 		]
-				# 	),
-				# ])
-
-			]
-		)
-	]
-)
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -186,8 +133,9 @@ assign_callback(app, "click-info", "clickInfo")
 @app.callback(
 	Output(component_id="deck_div", component_property="children"),
 	Output(component_id="area_by_lu", component_property="figure"),
+	Output(component_id="total_units", component_property="children"),
+	Output(component_id="total_population", component_property="children"),
 	[
-		Input(component_id='tiles_dir', component_property='value'),
 		Input(component_id="type", component_property="value"),
 		Input(component_id='rotate', component_property='n_clicks'),
 		Input(component_id='flip_h', component_property='n_clicks'),
@@ -195,25 +143,9 @@ assign_callback(app, "click-info", "clickInfo")
 		Input(component_id='select', component_property='n_clicks'),
 		Input(component_id='memory', component_property='data'),
 	])  # , State('input-on-submit', 'value'))
-def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
+def main_callback(sel_type, rotate, flip_h, flip_v, select, memory):
 	stt = time.time()
 	types_named = {t: i for i, t in enumerate(types)}
-
-	# Test slash side
-	if '/' in tiles_dir:
-		splitter = '/'
-	else:
-		splitter = '\\'
-
-	# Get filename
-	file_name = tiles_dir.split(splitter)[-1:][0].split('.')[:-1][0]
-
-	# # Test feather
-	# if f'{file_name}.feather' not in os.listdir('data'):
-	# 	grid_gdf = gpd.read_file(tiles_dir).to_crs(4326)
-	# 	grid_gdf.to_feather(f'data/{file_name}.feather')
-	# else:
-	# 	grid_gdf = gpd.read_feather(f'data/{file_name}.feather')
 
 	# Set index and random seed
 	grid_gdf['id'] = grid_gdf.index
@@ -235,6 +167,7 @@ def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
 			data=grid_gdf.to_crs(4326),
 			stroked=True,
 			wireframe=True,
+			opacity=0.2,
 			getFillColor=[180, 180, 180, 255],
 			get_line_color=[0, 0, 0],
 			get_line_width=4,
@@ -277,7 +210,8 @@ def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
 					data=tp_gdf.to_crs(4326),
 					stroked=True,
 					wireframe=True,
-					getFillColor=[180, 180, 0, 255],
+					opacity=0.2,
+					getFillColor=[180, 180, 0],
 					get_line_color=[0, 0, 0],
 					get_line_width=0.5,
 					auto_highlight=True,
@@ -314,6 +248,7 @@ def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
 			parcels = gpd.read_feather(f'data/feather/{prefix}parcels.feather')
 			buildings = gpd.read_feather(f'data/feather/{prefix}buildings.feather')
 			trees = gpd.read_feather(f'data/feather/{prefix}trees.feather')
+			ind = Indicators(parcels=parcels, buildings=buildings)
 
 		else:
 			print(f"\n {prefix}")
@@ -324,8 +259,9 @@ def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
 			blcks = tiles[tiles['Type'] == 'block']
 			trees = tiles[tiles['Type'] == 'trees']
 
-			scn = Scenario(parcels=prcls, buildings=bldgs, trees=trees, real_parks=PARKS, real_trees=REAL_TREES,
-			               name=prefix)
+			scn = Scenario(
+				parcels=prcls, buildings=bldgs, trees=trees, real_parks=PARKS, real_trees=REAL_TREES, name=prefix
+			)
 			scn.parcels = scn.extract_parks()
 			sb_trees = scn.extract_trees(directory='data/feather')
 			sb_trees.to_feather(f"data/feather/{prefix}trees.feather")
@@ -362,22 +298,40 @@ def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
 		parcels_pdk = pdk.Layer(
 			id=f"parcels",
 			type="GeoJsonLayer",
-			data=parcels.loc[:, ['geometry']].to_crs(4326),
-			getFillColor=[180, 180, 180, 255],
+			opacity=0.2,
+			data=parcels.loc[parcels['LANDUSE'] != 'OS', ['geometry']].to_crs(4326),
+			getFillColor=[180, 180, 180],
 		)
-		buildings_pdk = pdk.Layer(
-			id=f"buildings",
+
+		open_pdk = pdk.Layer(
+			id=f"open_spaces",
 			type="GeoJsonLayer",
-			extruded=True,
-			getElevation="height",
-			data=buildings.loc[:, ['height', 'geometry']].to_crs(4326),
-			getFillColor=[180, 180, 180, 255],
+			opacity=0.5,
+			data=parcels.loc[parcels['LANDUSE'] == 'OS', ['geometry']].to_crs(4326),
+			getFillColor=[180, 210, 180],
 		)
 
-		r.layers.append(parcels_pdk)
-		r.layers.append(buildings_pdk)
+		r.layers = r.layers + [parcels_pdk, open_pdk]
 
-		area_by_lu = None
+		def create_bld_layer(l_use, colors):
+			return pdk.Layer(
+				id=l_use,
+				type="GeoJsonLayer",
+				extruded=True,
+				getElevation="height",
+				opacity=0.8,
+				data=buildings.loc[buildings['LANDUSE'] == l_use, ['height', 'geometry']].to_crs(4326),
+				getFillColor=colors[l_use],
+			)
+
+		for use in COLORS.keys():
+			r.layers.append(create_bld_layer(use, COLORS))
+
+		area_by_lu = px.bar(
+			ind.get_area_by_land_use(), x='Land Use', y='Area (m²)', template=template,
+			color='Land Use', color_discrete_map=color_discrete_map
+		)
+
 	else:
 		prefix = GRID_FILE.split('.')[0]
 		prefix = f"{prefix.split('.')[0]}_"
@@ -389,9 +343,10 @@ def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
 		in_cell_pcl = gpd.overlay(parcels, cells.loc[:, ['geometry']])
 
 		ind = Indicators(parcels=in_cell_pcl, buildings=in_cell_bld)
-		area_by_lu = px.bar(ind.get_area_by_land_use(), x='area', y='LANDUSE')
-		ind.get_residential_units()
-		ind.get_resident_count()
+		area_by_lu = px.bar(
+			ind.get_area_by_land_use(), x='Land Use', y='Area (m²)', template=template,
+			color='Land Use', color_discrete_map=color_discrete_map
+		)
 
 	# Create deck-gl object
 	dgl = DeckGL(
@@ -402,8 +357,11 @@ def main_callback(tiles_dir, sel_type, rotate, flip_h, flip_v, select, memory):
 		style={'width': '100%', 'float': 'left', 'display': 'inline-block'},
 	)
 
+	total_units = int(ind.get_residential_units()['res_units'].sum())
+	total_population = int(ind.get_resident_count()['res_count'].sum())
+
 	print(f"Callback: {round((time.time() - stt), 3)} seconds with {[l.id for l in r.layers]} layers")
-	return dgl, area_by_lu
+	return dgl, area_by_lu, f"{total_units} units", f"{total_population} people"
 
 
 if __name__ == '__main__':
