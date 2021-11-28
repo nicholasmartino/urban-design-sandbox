@@ -129,6 +129,45 @@ def assign_callback(app_, out, event):
 assign_callback(app, "click-info", "clickInfo")
 
 
+@app.callback(
+	Output(component_id="cell_type_icon", component_property="figure"),
+	[Input(component_id="memory", component_property="data")]
+)
+def update_image(memory):
+	print(update_image)
+
+	CLUSTERS = {
+		2: 'cell_types8.png',
+		3: 'cell_types2.png',
+		4: 'cell_types7.png',
+		5: 'cell_types3.png',
+		8: 'cell_types6.png',
+		9: 'cell_types.png',
+		10: 'cell_types4.png',
+		11: 'cell_types5.png',
+		12: 'cell_types.png',
+	}
+
+	file_name = CLUSTERS[memory['object']['clus_gmm']]
+
+	fig = go.Figure()
+	fig.add_layout_image(
+		dict(
+			source=f"images/{file_name}",
+			xref="x",
+			yref="y",
+			x=0,
+			y=3,
+			sizex=2,
+			sizey=2,
+			opacity=0.5,
+			layer="below"
+		)
+	)
+	fig.update_layout(template=template)
+	return fig
+
+
 # LAYERS + DESIGN
 @app.callback(
 	Output(component_id="deck_div", component_property="children"),

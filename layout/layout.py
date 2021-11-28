@@ -41,7 +41,6 @@ layout = html.Div(
 					},
 					className='pretty_container',
 					children=[
-						html.Br(),
 						dcc.Dropdown(id='type', options=[{'label': name, 'value': name} for name in types.keys()]),
 						dbc.Row([
 							html.Button('Select', id='select', style={"width": "37%"}),
@@ -50,7 +49,8 @@ layout = html.Div(
 							html.Button('Flip V', id='flip_v', style={"width": "21%"}),
 						]),
 						html.Br(),
-						dcc.Graph(id='area_by_lu'),
+						dcc.Graph(id='cell_type_icon', style={'height': '31%'}),
+						dcc.Graph(id='area_by_lu', style={'height': '31%'}),
 						dbc.Row([
 							html.Div(id='total_units', style=TEXT_INDICATOR)
 						]),
@@ -58,7 +58,7 @@ layout = html.Div(
 							html.Div(id='total_population', style=TEXT_INDICATOR)
 						]),
 						html.Br(),
-						html.H5("Upload grid file*"),
+						html.H5("Upload grid file"),
 						dcc.Upload(
 							id="upload",
 							children=html.Div([
@@ -67,7 +67,7 @@ layout = html.Div(
 							]),
 							style={
 								'width': '95%',
-								'height': '60px',
+								'height': '50%',
 								'lineHeight': '60px',
 								'borderWidth': '1px',
 								'borderStyle': 'dashed',
@@ -76,7 +76,7 @@ layout = html.Div(
 								'margin': '10px'
 							},
 						),
-						html.Small("*Accepted formats: GeoJSON, Shapefile. Must contain 'clus_gmm' and 'Subtype' columns")
+						html.Small("Accepted formats: GeoJSON, Shapefile. Must contain 'clus_gmm' and 'Subtype' columns")
 					]
 				),
 			]
