@@ -153,18 +153,16 @@ def update_image(memory):
 	fig = go.Figure()
 	fig.add_layout_image(
 		dict(
-			source=f"images/{file_name}",
-			xref="x",
-			yref="y",
-			x=0,
-			y=3,
-			sizex=2,
-			sizey=2,
-			opacity=0.5,
+			source=f"https://raw.githubusercontent.com/nicholasmartino/urban-design-sandbox/master/images/{file_name}",
+			xref="x", x=2, sizex=9,
+			yref="y", y=3, sizey=9,
+			opacity=0.8,
 			layer="below"
 		)
 	)
 	fig.update_layout(template=template)
+	fig.update_xaxes(visible=False, showticklabels=False)
+	fig.update_yaxes(visible=False, showticklabels=False)
 	return fig
 
 
