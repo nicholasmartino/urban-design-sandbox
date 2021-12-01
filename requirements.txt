@@ -23,7 +23,7 @@ dash-extensions==0.0.65
 dash-html-components==1.1.2
 dash-leaflet==0.1.23
 dash-renderer==1.9.0
-dash-table==4.4.1
+dash-table==4.11.2
 debugpy==1.5.1
 decorator==5.1.0
 defusedxml==0.7.1
