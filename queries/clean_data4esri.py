@@ -44,13 +44,34 @@ COLUMNS = {
 	'mx_stories': ['maxstories'],
 	'height': ['Height', 'Building_Height', 'height', 'BuidlingHeight', 'building_h'],
 	'laneway': ['laneway'],
+	'age': ['age', 'AGE'],
+	'em_ht_t': ['em_ht_t'],
+	'em_cl_t': ['em_cl_t'],
+	'em_eqp_t': ['em_eqp_t'],
+	'em_dhw_t': ['em_dhw_t'],
+	'em_lgt_t': ['em_lgt_t'],
+	'ann_em_t': ['ann_em_t']
 }
+
+
+def get_d2landuse(g, land_use):
+	return [geom.distance(g[g['landuse'].isin(land_use)].unary_union) for geom in g['geometry']]
+
 
 if __name__ == '__main__':
 	gdfs = gpd.GeoDataFrame()
 	for city, experiments in LAYERS.items():
 		for experiment, layer in experiments.items():
 			gdf = gpd.read_file(f'{DIRECTORY}/{city}', layer=layer)
+
+			# Transform emissions kg data into tons
+			for em_col in ['em_ht_t', 'em_cl_t', 'em_eqp_t', 'em_dhw_t', 'em_lgt_t', 'ann_em_t']:
+				if em_col not in gdf.columns:
+					kg_col = f"{em_col.split('_t')[0]}_kg"
+					assert kg_col in gdf.columns, AssertionError(f"No {em_col} or {kg_col} data for {layer} layer in {city} database")
+					gdf[em_col] = gdf[kg_col] / 1000
+
+			# Check if columns exist
 			gdf['city'] = city
 			gdf['experiment'] = experiment
 			for new, old_columns in COLUMNS.items():
@@ -59,8 +80,13 @@ if __name__ == '__main__':
 				for old in old_columns:
 					if old in gdf.columns:
 						gdf[new] = gdf[old]
+
+			# Calculate distance indicators
+			gdf['d2os'] = get_d2landuse(gdf, ['OS'])
+			gdf['d2cv'] = get_d2landuse(gdf, ['CV'])
+			gdf['d2cm'] = get_d2landuse(gdf, ['CM', 'MX'])
 			gdfs = pd.concat([gdfs, gdf])
-	gdfs = gdfs.loc[:, list(COLUMNS.keys()) + ['geometry']]
+	gdfs = gdfs.loc[:, list(COLUMNS.keys()) + ['d2os', 'd2cv', 'd2cm', 'city', 'experiment', 'geometry']]
 
 	# Rename land use
 	rename = {

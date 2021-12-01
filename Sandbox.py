@@ -36,8 +36,11 @@ class Indicators:
 		return gdf
 
 	def get_residential_units(self):
+
 		gdf = self.buildings.copy()
+		gdf = gdf.reset_index(drop=True)
 		gdf['maxstories'] = gdf['maxstories'].fillna(0)
+		gdf['maxstories'] = pd.to_numeric(gdf['maxstories'])
 
 		# Set average unit area by cell type
 		sqft_sqm = 10.76391
@@ -71,6 +74,7 @@ class Indicators:
 
 	def get_resident_count(self):
 		gdf = self.buildings.copy()
+		gdf['res_units'] = pd.to_numeric(gdf['res_units'])
 		gdf.loc[gdf['cell_type'] == 'Open_Low_Density', 'res_count'] = 2.098 * gdf.loc[gdf['cell_type'] == 'Open_Low_Density', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Mid_High_Street', 'res_count'] = 1.967 * gdf.loc[gdf['cell_type'] == 'Mid_High_Street', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Coarse_Grain', 'res_count'] = 1.753 * gdf.loc[gdf['cell_type'] == 'Coarse_Grain', 'res_units']
@@ -172,6 +176,11 @@ class Indicators:
 		blocks_gdf['area'] = blocks_gdf.area
 		return blocks_gdf
 
+	def get_height_from_storeis(self):
+		gdf = self.buildings.copy()
+		gdf['height'] = gdf['maxstories'] * 3
+		return gdf
+
 	def join_land_use_from_parcels(self):
 		gdf = self.buildings.copy().reset_index(drop=True)
 		gdf['LANDUSE'] = Analyst(gdf, self.parcels.copy().loc[:, ['LANDUSE', 'geometry']]).spatial_join()['LANDUSE']
@@ -192,6 +201,7 @@ class Indicators:
 		self.buildings = self.get_residential_units()
 		self.buildings = self.get_commercial_units()
 		self.buildings = self.get_resident_count()
+		self.buildings = self.get_height_from_storeis()
 		print("Indicators successfully extracted")
 
 		assert len(self.parcels[self.parcels['LANDUSE'] == 'OS']) > 0, AssertionError('Parcel layer has no open spaces (OS) under LANDUSE column')
@@ -225,12 +235,13 @@ class Scenario:
 		inters_parcels = gpd.overlay(pcl.loc[:, ['pid', 'geometry']], self.real_parks)
 		prcls.loc[prcls['pid'].isin(inters_parcels['pid']), 'LANDUSE'] = 'OS'
 		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(12, join_style=2)
-		dissolved = Shape(prcls[prcls['LANDUSE'] == 'OS']).dissolve()
-		dissolved['LANDUSE'] = 'OS'
-		dissolved['Type'] = 'prcls'
-		prcls = pd.concat([prcls[prcls['LANDUSE'] != 'OS'], dissolved])
-		prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(-16, join_style=2)
-		prcls = prcls.dropna(subset=['geometry']).reset_index(drop=True)
+		if len(prcls[prcls['LANDUSE'] == 'OS']) > 0:
+			dissolved = Shape(prcls[prcls['LANDUSE'] == 'OS']).dissolve()
+			dissolved['LANDUSE'] = 'OS'
+			dissolved['Type'] = 'prcls'
+			prcls = pd.concat([prcls[prcls['LANDUSE'] != 'OS'], dissolved])
+			prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']] = prcls.loc[prcls['LANDUSE'] == 'OS', ['geometry']].buffer(-16, join_style=2)
+			prcls = prcls.dropna(subset=['geometry']).reset_index(drop=True)
 		return prcls
 
 	def extract_trees(self, directory=''):

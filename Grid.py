@@ -1,5 +1,5 @@
 import os
-from ShapeTools import Shape
+from ShapeTools import Shape, Analyst
 import geopandas as gpd
 import pandas as pd
 from Tiles import TILES
@@ -163,6 +163,7 @@ class Grid:
 
 			for centroid in centroids:
 				tile.all_layers = tile.move_all_layers(centroid)
+				tile.all_layers['id_grid'] = list(Analyst(tile.all_layers, grid.loc[:, ['id', 'geometry']]).spatial_join(operations=['max'])['id_max'])
 				bld = pd.concat([bld, tile.all_layers[tile.all_layers['Type'] == 'bldgs']])
 				pcl = pd.concat([pcl, tile.all_layers[tile.all_layers['Type'] == 'prcls']])
 				net = pd.concat([net, tile.all_layers[tile.all_layers['Type'] == 'ntwrk']])
@@ -171,8 +172,10 @@ class Grid:
 				all_layers = pd.concat([all_layers, tile.all_layers])
 
 		if export:
-			if len(bld) > 0: bld.to_file(f'{self.directory}/{self.prefix}buildings.shp')
-			if len(pcl) > 0: pcl.to_file(f'{self.directory}/{self.prefix}parcels.shp')
+			if len(bld) > 0:
+				bld.to_file(f'{self.directory}/{self.prefix}buildings.shp')
+			if len(pcl) > 0:
+				pcl.to_file(f'{self.directory}/{self.prefix}parcels.shp')
 			if len(net) > 0:
 				grid_bnd = grid.copy()
 				grid_bnd['geometry'] = grid_bnd['geometry'].boundary
@@ -180,8 +183,10 @@ class Grid:
 				net = pd.concat([net, grid_bnd.loc[:, ['geometry']]])
 				net = net.drop_duplicates('geometry')
 				net.to_file(f'{self.directory}/{self.prefix}network.shp')
-			if len(veg) > 0: veg.to_file(f'{self.directory}/{self.prefix}trees.shp')
-			if len(blk) > 0: blk.to_file(f'{self.directory}/{self.prefix}blocks.shp')
+			if len(veg) > 0:
+				veg.to_file(f'{self.directory}/{self.prefix}trees.shp')
+			if len(blk) > 0:
+				blk.to_file(f'{self.directory}/{self.prefix}blocks.shp')
 		# all_layers = all_layers.reset_index(drop=True).drop('id', axis=1).dropna(how='all')
 		# all_layers.to_file(f'{self.directory}/{self.prefix}all_tiles.geojson', driver='GeoJSON')
 		# all_layers.to_crs(4326).to_file(f'{self.directory}/{self.prefix}all_tiles4326.geojson', driver='GeoJSON')
