@@ -17,7 +17,7 @@ for file in GRID_FILES:
 	grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
 	Grid(gdf=grid_gdf, tiles=TILES, directory=OUT_DIR, prefix=f"{file.split('.')[0]}_",
 	     land_use=gpd.read_file('data/mvan/Landuse2016/Landuse2016.shp'),
-	     diagonal_gdf=gpd.read_file('data/diagonal_tiles.geojson')).test_grid()
+	     diagonal_gdf=gpd.read_file('data/geojson/diagonal_tiles.geojson')).test_grid()
 
 # Get open spaces from CoV open data
 if sys.platform == 'win32':

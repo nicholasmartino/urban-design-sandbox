@@ -65,7 +65,7 @@ else:
 PARKS = gpd.read_feather('data/feather/cov_parks.feather')
 REAL_TREES = gpd.read_feather('data/feather/nature_tree_canopy.feather')
 land_use_gdf = gpd.read_feather('data/feather/mvan_landuse.feather')
-diagonal_gdf = gpd.read_file('data/diagonal_tiles.geojson')
+diagonal_gdf = gpd.read_file('data/geojson/diagonal_tiles.geojson')
 CLUSTERS = {
 	2: 'cell_types8.png',
 	3: 'cell_types3.png',
