@@ -24,7 +24,7 @@ defusedxml==0.7.1
 entrypoints==0.3
 Fiona==1.8.20
 Flask==2.0.2
-Flask-Compress==0.0.0
+Flask-Compress==1.8.0
 folium==0.0.0
 fonttools==4.28.2
 GDAL==3.4.0
