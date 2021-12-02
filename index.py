@@ -56,7 +56,7 @@ DIRECTORY = \
 all_tiles = TILE_GDF.copy()
 
 # Define zoning layer colors
-GRID_GDF = gpd.read_feather('data/geojson/kitsilano_baseline.feather')
+GRID_GDF = gpd.read_feather('data/geojson/kitsilano_baseline.geojson')
 # Get open spaces from CoV open data
 if sys.platform == 'win32':
 	GPKG = 'G:/My Drive/Databases/Vancouver, British Columbia.gpkg'
