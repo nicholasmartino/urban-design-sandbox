@@ -32,9 +32,9 @@ if sys.platform == 'win32':
 	SERVER_DIR = f'S:/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage'
 else:
 	SERVER_DIR = f'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage'
-GRID_DIR = f'{SERVER_DIR}/Data/gmm_grids'
-GRID_FILES = ['dunbar_baseline.geojson', 'kitsilano_baseline.geojson']
-OUT_DIR = f'{SERVER_DIR}/Sandbox/shp/City-Wide'
+# GRID_DIR = f'{SERVER_DIR}/Data/gmm_grids'
+# GRID_FILES = ['dunbar_baseline.geojson', 'kitsilano_baseline.geojson']
+# OUT_DIR = f'{SERVER_DIR}/Sandbox/shp/City-Wide'
 
 if 'streets_utm_cov.feather' in os.listdir('data/feather'):
 	STREETS = gpd.read_feather(f'data/feather/streets_utm_cov.feather')
