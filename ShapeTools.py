@@ -14,9 +14,6 @@ from shapely.geometry import Point, Polygon, LineString, MultiPoint, MultiLineSt
 from shapely.ops import split, unary_union, nearest_points, linemerge, snap
 from tqdm import tqdm
 import matplotlib
-matplotlib.use('TkAgg')
-
-plt.show()
 
 
 def azimuth(ln):
