@@ -63,7 +63,7 @@ if sys.platform == 'win32':
 else:
 	GPKG = '/Volumes/Samsung_T5/Databases/Vancouver, British Columbia.gpkg'
 PARKS = gpd.read_feather('data/feather/cov_parks.feather')
-REAL_TREES = gpd.read_feather('data/feather/nature_tree_canopy.feather')
+# REAL_TREES = gpd.read_feather('data/feather/nature_tree_canopy.feather')
 land_use_gdf = gpd.read_feather('data/feather/mvan_landuse.feather')
 diagonal_gdf = gpd.read_file('data/geojson/diagonal_tiles.geojson')
 CLUSTERS = {
@@ -131,7 +131,7 @@ def build_scenario(tiles, prefix):
 	trees = tiles[tiles['Type'] == 'trees']
 
 	scn = Scenario(
-		parcels=prcls, buildings=bldgs, trees=trees, real_parks=PARKS, real_trees=REAL_TREES, name=prefix
+		parcels=prcls, buildings=bldgs, trees=trees, real_parks=PARKS, real_trees=None, name=prefix
 	)
 	scn.parcels = scn.extract_parks()
 	# sb_trees = scn.extract_trees(directory='data/feather')
