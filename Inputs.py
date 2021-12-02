@@ -42,6 +42,9 @@ else:
 	STREETS = gpd.read_file(f'{SERVER_DIR}/Sandbox/shp/COV/Data/COV/streets_utm_cov.shp')
 	STREETS.to_feather('data/feather/streets_utm_cov.feather')
 
+TILE_GDF = gpd.read_feather('data/feather/all_tiles.feather')
+NET_GDF = gpd.read_feather('data/feather/all_tiles_network.feather')
+
 TYPES = {
 	2: 'Open_Low_Density',
 	3: 'Mid_High_Street',
