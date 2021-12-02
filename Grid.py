@@ -1,5 +1,6 @@
 import os
-from ShapeTools import Shape, Analyst
+
+
 import geopandas as gpd
 import pandas as pd
 from Tiles import TILES
@@ -7,6 +8,9 @@ from Tile import Tile
 from tqdm import tqdm
 from Inputs import *
 from shapely.affinity import scale
+# from github_com.nicholasmartino import morphology
+# "https://github.com/nicholasmartino/morphology"
+from morphology import Shape, ShapeTools
 
 
 class Grid:

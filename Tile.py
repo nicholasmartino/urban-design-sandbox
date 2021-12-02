@@ -1,5 +1,5 @@
 import pandas as pd
-from ShapeTools import Shape
+from github_com.nicholasmartino import morphology
 from shapely.affinity import scale
 
 
@@ -28,13 +28,13 @@ class Tile:
 		self.trees['Type'] = 'trees'
 		self.block['Type'] = 'block'
 
-		all_layers = Shape(self.all_layers).move(reference)
+		all_layers = morphology.ShapeTools.Shape(self.all_layers).move(reference)
 		return all_layers
 
 	def flip_horizontal(self):
-		self.all_layers = Shape(self.all_layers).flip(-1, 1, self.bound.centroid)
+		self.all_layers = morphology.ShapeTools.Shape(self.all_layers).flip(-1, 1, self.bound.centroid)
 		return self
 
 	def flip_vertical(self):
-		self.all_layers = Shape(self.all_layers).flip(1, -1, self.bound.centroid)
+		self.all_layers = morphology.ShapeTools.Shape(self.all_layers).flip(1, -1, self.bound.centroid)
 		return self
