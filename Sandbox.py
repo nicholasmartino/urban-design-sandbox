@@ -1,14 +1,9 @@
-import os
-import sys
-
-import geopandas as gpd
-import pandas as pd
-from ShapeTools import Shape, Analyst
 import numpy as np
+import pandas as pd
+
 from Inputs import *
-sys.path.append('/Users/nicholasmartino/Google Drive/Python/urban-zoning')
-sys.path.append('G:/My Drive/Python/urban-zoning')
-from City.Network import Streets
+from ShapeTools import Shape, Analyst
+from Network import Streets
 
 
 class Indicators:
