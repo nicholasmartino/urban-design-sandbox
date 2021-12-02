@@ -53,9 +53,7 @@ dlatlon2 = 1e-6  # Controls tolerance of closing click
 DIRECTORY = \
 	"/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership " \
 	"Engage/Sandbox/shp/Tiers/GrossNewPopulation/Shp/ "
-all_tiles = gpd.read_file(
-	'/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership '
-	'Engage/Sandbox/shp/elementslab/Version_3/all_tiles.shp')
+all_tiles = TILE_GDF.copy()
 
 # Define zoning layer colors
 GRID_GDF = gpd.read_feather('data/feather/broadway_plan_baseline.feather')
