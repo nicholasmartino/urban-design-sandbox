@@ -21,11 +21,13 @@ GRID_DIR = 'data/grids'
 GRID_FILES = [
 	'dunbar_baseline.geojson',
     'kitsilano_baseline.geojson',
-	# 'main_baseline.geojson',
-	# 'marpole_baseline.geojson',
-	# 'sunset_baseline.geojson'
+	'main_baseline.geojson',
+	'marpole_baseline.geojson',
+	'sunset_baseline.geojson'
 ]
 OUT_DIR = 'data/sandboxes'
+GRID_GDF = gpd.read_file('data/geojson/kitsilano_baseline.geojson')
+GRID_FILE = 'kitsilano_baseline.geojson'
 
 # Server settings
 if sys.platform == 'win32':

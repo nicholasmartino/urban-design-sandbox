@@ -1,10 +1,10 @@
-from dash import dcc
 import dash_bootstrap_components as dbc
-from dash import html
 import dash_extensions as de
+import dash_core_components as dcc
+import dash_html_components as html
 
 RIGHT_BAR_WIDTH = 380
-GRID_FILE = "fishned_CoV_gmm_joined.geojson"
+# GRID_FILE = "fishned_CoV_gmm_joined.geojson"
 ALPHA = 100
 types = {
 	'Open_Low_Density': 2,

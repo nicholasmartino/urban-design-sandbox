@@ -1,5 +1,5 @@
 import pandas as pd
-from Inputs import *
+
 from ShapeTools import Shape
 
 
@@ -28,7 +28,10 @@ class Tile:
 		self.trees['Type'] = 'trees'
 		self.block['Type'] = 'block'
 
-		all_layers = Shape(self.all_layers).move(reference)
+		try:
+			all_layers = Shape(self.all_layers).move(reference)
+		except:
+			pass
 		return all_layers
 
 	def flip_horizontal(self):

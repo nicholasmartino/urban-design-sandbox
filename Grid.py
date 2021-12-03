@@ -1,6 +1,10 @@
+import gc
+import os
+
+import geopandas as gpd
 import pandas as pd
 from tqdm import tqdm
-from Inputs import *
+
 from ShapeTools import Shape, Analyst
 
 
@@ -165,6 +169,7 @@ class Grid:
 				veg = pd.concat([veg, tile.all_layers[tile.all_layers['Type'] == 'trees']])
 				blk = pd.concat([blk, tile.all_layers[tile.all_layers['Type'] == 'block']])
 				all_layers = pd.concat([all_layers, tile.all_layers])
+				gc.collect()
 
 		if export:
 			if len(bld) > 0:

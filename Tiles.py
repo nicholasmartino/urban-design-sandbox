@@ -1,7 +1,7 @@
-import geopandas as gpd
-from Tile import Tile
-from Inputs import *
+import gc
 
+from Inputs import TILE_GDF, NET_GDF
+from Tile import Tile
 
 assert 'cell_type' in TILE_GDF.columns
 assert 'Subtype' in TILE_GDF.columns
@@ -26,3 +26,4 @@ for tp in TILE_GDF['cell_type'].unique():
 			TILES.append(Tile(tp, tile.buildings, tile.parcels, tile.network, tile.trees, tile.block, tile.bound, f'{st} Down').flip_vertical())
 			TILES.append(Tile(tp, tile.buildings, tile.parcels, tile.network, tile.trees, tile.block, tile.bound, f'{st} Left').flip_horizontal())
 			TILES.append(Tile(tp, tile.buildings, tile.parcels, tile.network, tile.trees, tile.block, tile.bound, f'{st} Down Left').flip_horizontal().flip_vertical())
+		gc.collect()

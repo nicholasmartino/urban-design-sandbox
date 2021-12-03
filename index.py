@@ -2,9 +2,10 @@ import base64
 import io
 import os.path
 import time
-
+import geopandas as gpd
+import sys
 import dash
-from dash import html
+import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -14,13 +15,12 @@ from dash_deck import DeckGL
 from shapely.geometry import Polygon
 
 from Grid import Grid
-from Inputs import *
-from Inputs import TYPES
+from Inputs import TYPES, GRID_GDF, TILE_GDF, GRID_FILE, STREETS
 from Sandbox import Scenario, Indicators
 from Tiles import TILES
 from app import app
 from app import server
-from layout.layout import GRID_FILE, types
+from layout.layout import types
 
 random_seed = 0
 transparent = 'rgba(255,255,255,0)'
@@ -56,7 +56,7 @@ DIRECTORY = \
 all_tiles = TILE_GDF.copy()
 
 # Define zoning layer colors
-GRID_GDF = gpd.read_file('data/geojson/kitsilano_baseline.geojson')
+
 # Get open spaces from CoV open data
 if sys.platform == 'win32':
 	GPKG = 'G:/My Drive/Databases/Vancouver, British Columbia.gpkg'
