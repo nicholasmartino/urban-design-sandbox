@@ -457,4 +457,4 @@ def download_layers(deck_div, n_clicks):
 
 
 if __name__ == '__main__':
-	app.run_server(debug=False, port=9000)
+	app.run_server(debug=False, host='0.0.0.0', port=80)
