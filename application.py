@@ -1,11 +1,12 @@
 import base64
 import io
 import os.path
-import time
-import geopandas as gpd
 import sys
+import time
+
 import dash
 import dash_html_components as html
+import geopandas as gpd
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -18,9 +19,15 @@ from Grid import Grid
 from Inputs import TYPES, GRID_GDF, TILE_GDF, GRID_FILE, STREETS
 from Sandbox import Scenario, Indicators
 from Tiles import TILES
-from app import app
-from app import server
+from layout.layout import layout
 from layout.layout import types
+
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app.layout = layout
+
+server = app.server
+app.config.suppress_callback_exceptions = True
 
 random_seed = 0
 transparent = 'rgba(255,255,255,0)'
