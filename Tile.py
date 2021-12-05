@@ -1,5 +1,9 @@
 import pandas as pd
+<<<<<<< HEAD
 
+=======
+from Inputs import *
+>>>>>>> ef39bd4ecab44754cfa3e028344731276ce4a7af
 from ShapeTools import Shape
 
 
