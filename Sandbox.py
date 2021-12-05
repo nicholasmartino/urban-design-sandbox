@@ -1,18 +1,9 @@
-<<<<<<< HEAD
-import geopandas as gpd
-import numpy as np
-import pandas as pd
-
-from Network import Streets
-from ShapeTools import Shape, Analyst
-=======
 import numpy as np
 import pandas as pd
 
 from Inputs import *
-from ShapeTools import Shape, Analyst
 from Network import Streets
->>>>>>> ef39bd4ecab44754cfa3e028344731276ce4a7af
+from ShapeTools import Shape, Analyst
 
 
 class Indicators:

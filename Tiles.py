@@ -1,14 +1,7 @@
-<<<<<<< HEAD
 import gc
 
-from Inputs import TILE_GDF, NET_GDF
-from Tile import Tile
-=======
-import geopandas as gpd
-from Tile import Tile
 from Inputs import *
-
->>>>>>> ef39bd4ecab44754cfa3e028344731276ce4a7af
+from Tile import Tile
 
 assert 'cell_type' in TILE_GDF.columns
 assert 'Subtype' in TILE_GDF.columns

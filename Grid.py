@@ -1,16 +1,9 @@
-<<<<<<< HEAD
 import gc
-import os
 
-import geopandas as gpd
 import pandas as pd
 from tqdm import tqdm
 
-=======
-import pandas as pd
-from tqdm import tqdm
 from Inputs import *
->>>>>>> ef39bd4ecab44754cfa3e028344731276ce4a7af
 from ShapeTools import Shape, Analyst
 
 

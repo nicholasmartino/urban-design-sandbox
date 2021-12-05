@@ -1,7 +1,7 @@
 import os
+import sys
 
 import geopandas as gpd
-import sys
 import requests
 
 
