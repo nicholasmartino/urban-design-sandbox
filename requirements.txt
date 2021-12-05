@@ -1,5 +1,5 @@
 appnope==0.1.2
-argon2-cffi==21.1.0
+argon2-cffi==19.2.0
 attrs==21.2.0
 backcall==0.2.0
 bleach==4.1.0

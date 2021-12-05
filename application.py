@@ -458,3 +458,5 @@ def download_layers(deck_div, n_clicks):
 
 if __name__ == '__main__':
 	app.run_server(debug=False, host='0.0.0.0', port=80)
+
+"https://www.phillipsj.net/posts/deploying-dash-to-azure-app-service/"
