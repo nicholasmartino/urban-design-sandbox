@@ -19,7 +19,7 @@ class Indicators:
 	def get_buildings_floor_area(self):
 		gdf = self.buildings.copy()
 		gdf['area'] = gdf.area
-		gdf['floor_area'] = gdf['area'] * gdf['maxstories']
+		gdf['floor_area'] = gdf['area'] * pd.to_numeric(gdf['maxstories'])
 		return gdf
 
 	def get_parcel_far(self):
@@ -53,9 +53,9 @@ class Indicators:
 
 		gdf.loc[gdf['LANDUSE'].isin(['CM', 'CV', 'IND', 'OS']), 'res_units'] = 0
 		gdf.loc[gdf['LANDUSE'].isin(['MFL', 'MFM', 'MFH', 'SFA']), 'res_units'] = (
-				(gdf['area']/gdf['unit_area']) * gdf['maxstories']).fillna(0).replace(np.inf, 0).astype(int)
+				(gdf.area/gdf['unit_area']) * gdf['maxstories']).fillna(0).replace(np.inf, 0).astype(int)
 		gdf.loc[(gdf['LANDUSE'] == 'SFD') & (gdf['laneway'] == 0), 'res_units'] = 1
-		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = ((gdf['area']/gdf['unit_area']) * (gdf['maxstories'] - 1)).fillna(0).replace(-np.inf, 0).astype(int)
+		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = ((gdf.area/gdf['unit_area']) * (gdf['maxstories'] - 1)).fillna(0).replace(-np.inf, 0).astype(int)
 		gdf['res_units'] = gdf['res_units'].fillna(0).astype(int)
 		return gdf
 
@@ -63,8 +63,9 @@ class Indicators:
 		gdf = self.buildings.copy()
 		gdf['maxstories'] = gdf['maxstories'].fillna(0)
 
-		gdf.loc[gdf['LANDUSE'] == 'CM', 'comm_units'] = (gdf['floor_area']/unit_area).astype(int) * gdf['maxstories']
-		gdf.loc[gdf['LANDUSE'] == 'MX', 'comm_units'] = (gdf['floor_area']/unit_area).astype(int)
+		if sum(gdf['floor_area']) > 0:
+			gdf.loc[gdf['LANDUSE'] == 'CM', 'comm_units'] = (gdf['floor_area']/unit_area).astype(int) * gdf['maxstories']
+			gdf.loc[gdf['LANDUSE'] == 'MX', 'comm_units'] = (gdf['floor_area']/unit_area).astype(int)
 		return gdf
 
 	def get_resident_count(self):
@@ -99,6 +100,7 @@ class Indicators:
 
 	def get_area_by_land_use(self):
 		gdf = self.parcels.copy()
+		gdf['area'] = gdf.area
 		df = pd.DataFrame(gdf.groupby('LANDUSE').sum()['area'])
 		df['LANDUSE'] = df.index
 		df = df.rename(columns={'area': 'Area (m²)', 'LANDUSE': 'Land Use'})
