@@ -15,12 +15,11 @@ def import_github(user='nicholasmartino', repository='morphology', branch='maste
 import_github(repository='morphology', file='ShapeTools.py')
 import_github(repository='city', file='Network.py')
 
-
 # Local settings
 GRID_DIR = 'data/grids'
 GRID_FILES = [
 	'dunbar_baseline.geojson',
-    'kitsilano_baseline.geojson',
+	'kitsilano_baseline.geojson',
 	'main_baseline.geojson',
 	'marpole_baseline.geojson',
 	'sunset_baseline.geojson'

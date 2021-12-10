@@ -4,7 +4,7 @@ import os.path
 import time
 
 import dash
-from dash import html
+import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
