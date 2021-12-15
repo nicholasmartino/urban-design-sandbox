@@ -30,7 +30,7 @@ application = app.server
 app.config.suppress_callback_exceptions = True
 
 random_seed = 0
-transparent = 'rgba(255,255,255,0)'
+transparent = 'rgba(255,255,254,0)'
 
 COLORS = {
 	"SFD": [255, 248, 165],
