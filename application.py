@@ -187,7 +187,7 @@ def parse_geojson(encoded):
 
 
 # Define initial view state and create deck object
-view_state = pdk.ViewState(latitude=49.254, longitude=-123.13, zoom=15, max_zoom=20, pitch=30, bearing=0)
+view_state = pdk.ViewState(latitude=49.254, longitude=-123.13, zoom=15, max_zoom=20, pitch=60, bearing=0)
 r = pdk.Deck(
 	layers=[],
 	initial_view_state=view_state,
@@ -262,7 +262,7 @@ def update_image(memory):
 		Input(component_id='upload', component_property='contents'),
 		State(component_id='upload', component_property='filename')
 	])  # , State('input-on-submit', 'value'))
-def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, file_name):
+def main_callback(sel_type, rotate, flip_h, flip_v, change, memory, uploaded, file_name):
 	stt = time.time()
 	types_named = {t: i for i, t in enumerate(types)}
 
@@ -405,7 +405,7 @@ def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, fi
 
 		cells = gdf_from_memory(memory).to_crs(26910)
 		cells['Type'] = cells['clus_gmm'].replace(TYPES)
-		if (sel_type is not None) and (select == 1):
+		if (sel_type is not None) and (change == 1):
 			# Select parcels and buildings not selected cell
 			subtype = list(set(parcels[parcels['id_grid'].isin(list(cells['id']))]['Subtype']))[0]
 			parcels = parcels[~parcels['id_grid'].isin(list(cells['id']))]
@@ -418,6 +418,7 @@ def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, fi
 					cells = join_high_st(cells)
 				grid = Grid(cells, TILES, prefix=f"{prefix}_{list(cells['id'])}", land_use=land_use_gdf, diagonal_gdf=diagonal_gdf)
 				grid.gdf['Subtype'] = subtype
+				grid.gdf['Type'] = sel_type
 				tiles = grid.test_place_tiles()
 
 				ind = build_scenario(tiles, prefix)

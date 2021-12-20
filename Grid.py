@@ -200,7 +200,7 @@ class Grid:
 			self.assert_land_use_layer()
 			self.gdf = self.assign_subtypes_by_landuse()
 		assert sum(self.gdf['Subtype'].isna()) == 0
-		return
+		return self.gdf
 
 	def test_place_tiles(self):
 		assert os.path.exists(self.directory), NotADirectoryError(f"{self.directory} not found")
