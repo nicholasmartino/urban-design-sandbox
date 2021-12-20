@@ -130,6 +130,25 @@ def create_bld_layer(l_use, colors, buildings):
 	)
 
 
+def create_pcl_layers(gdf):
+	parcels_pdk = pdk.Layer(
+			id=f"parcels",
+			type="GeoJsonLayer",
+			opacity=0.2,
+			data=gdf.loc[gdf['LANDUSE'] != 'OS', ['geometry']].to_crs(4326),
+			getFillColor=[180, 180, 180],
+		)
+	open_pdk = pdk.Layer(
+		id=f"open_spaces",
+		type="GeoJsonLayer",
+		opacity=0.5,
+		data=gdf.loc[gdf['LANDUSE'] == 'OS', ['geometry']].to_crs(4326),
+		getFillColor=COLORS['OS'],
+	)
+
+	return parcels_pdk, open_pdk
+
+
 def build_scenario(tiles, prefix):
 	prcls = tiles[tiles['Type'] == 'prcls']
 	bldgs = tiles[tiles['Type'] == 'bldgs']
@@ -168,7 +187,7 @@ def parse_geojson(encoded):
 
 
 # Define initial view state and create deck object
-view_state = pdk.ViewState(latitude=49.254, longitude=-123.13, zoom=15, max_zoom=20, pitch=0, bearing=0)
+view_state = pdk.ViewState(latitude=49.254, longitude=-123.13, zoom=15, max_zoom=20, pitch=30, bearing=0)
 r = pdk.Deck(
 	layers=[],
 	initial_view_state=view_state,
@@ -367,22 +386,7 @@ def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, fi
 				to_feather(f"data/feather/{prefix}buildings.feather")
 
 		# Create buildings and parcels layers
-		parcels_pdk = pdk.Layer(
-			id=f"parcels",
-			type="GeoJsonLayer",
-			opacity=0.2,
-			data=parcels.loc[parcels['LANDUSE'] != 'OS', ['geometry']].to_crs(4326),
-			getFillColor=[180, 180, 180],
-		)
-
-		open_pdk = pdk.Layer(
-			id=f"open_spaces",
-			type="GeoJsonLayer",
-			opacity=0.5,
-			data=parcels.loc[parcels['LANDUSE'] == 'OS', ['geometry']].to_crs(4326),
-			getFillColor=COLORS['OS'],
-		)
-
+		parcels_pdk, open_pdk = create_pcl_layers(parcels)
 		r.layers = r.layers + [parcels_pdk, open_pdk]
 
 		for use in COLORS.keys():
@@ -429,6 +433,9 @@ def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, fi
 				r.layers = [lay for lay in r.layers if lay.id in ['cells', 'open_spaces']]
 				for use in COLORS.keys():
 					r.layers.append(create_bld_layer(use, COLORS, buildings))
+				parcels_pdk, open_pdk = create_pcl_layers(parcels)
+				r.layers.append(parcels_pdk)
+				r.layers.append(open_pdk)
 
 		in_cell_bld = gpd.overlay(buildings, cells.loc[:, ['geometry']])
 		in_cell_pcl = gpd.overlay(parcels, cells.loc[:, ['geometry']])
