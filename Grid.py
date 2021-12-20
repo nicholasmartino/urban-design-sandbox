@@ -194,6 +194,7 @@ class Grid:
 	def test_assign_subtypes(self):
 		assert len(self.gdf.index) == len(self.gdf.index.unique()), IndexError("Duplicated indices found")
 		self.assert_type_column()
+		self.assert_high_st_column()
 		self.gdf = self.assign_subtypes_by_adjency()
 		if self.land_use is not None:
 			self.assert_land_use_layer()

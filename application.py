@@ -46,8 +46,8 @@ COLORS = {
 }
 color_discrete_map = {key: f'rgb{tuple(i)}' for key, i in COLORS.items()}
 template = dict(layout=go.Layout(
-	title_font=dict(family="Avenir", size=24),
-	font=dict(family="Avenir"),
+	title_font=dict(family="Roboto", size=24),
+	font=dict(family="Roboto"),
 	paper_bgcolor='rgba(0,0,0,0)',
 	plot_bgcolor='rgba(0,0,0,0)',
 ))
@@ -152,6 +152,15 @@ def build_scenario(tiles, prefix):
 	return ind
 
 
+def join_high_st(gdf):
+	STREETS['geometry'] = STREETS.buffer(5)
+	gdf['id'] = gdf.index
+	gdf.loc[gpd.overlay(gdf, STREETS[STREETS['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
+	gdf.loc[gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
+	gdf.loc[(gdf['Arterial'] == 1) & (gdf['High St Type'] == 1), 'High St'] = 1
+	return gdf
+
+
 def parse_geojson(encoded):
 	content_type, content_string = encoded.split(',')
 	decoded = base64.b64decode(content_string)
@@ -221,6 +230,8 @@ def update_image(memory):
 	Output(component_id="area_by_lu", component_property="figure"),
 	Output(component_id="total_units", component_property="children"),
 	Output(component_id="total_population", component_property="children"),
+	Output(component_id="fsr", component_property="children"),
+	Output(component_id="max_height", component_property="children"),
 	Output(component_id="loading-output-1", component_property="children"),
 	[
 		Input(component_id="type", component_property="value"),
@@ -322,9 +333,7 @@ def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, fi
 			grid_gdf['Type'] = grid_gdf['clus_gmm'].replace(TYPES)
 			grid_gdf.loc[grid_gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
 		if 'High St' not in grid_gdf.columns:
-			STREETS['geometry'] = STREETS.buffer(5)
-			grid_gdf.loc[gpd.overlay(grid_gdf, STREETS[STREETS['Category'] == 'Arterial'])['id'], 'Arterial'] = 1
-			grid_gdf.loc[(grid_gdf['Arterial'] == 1) & (grid_gdf['High St Type'] == 1), 'High St'] = 1
+			grid_gdf = join_high_st(grid_gdf)
 
 		# Read/export all layers
 		if os.path.exists(all_layers_file):
@@ -392,26 +401,32 @@ def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, fi
 
 		cells = gdf_from_memory(memory).to_crs(26910)
 		cells['Type'] = cells['clus_gmm'].replace(TYPES)
-		if sel_type is not None:
+		if (sel_type is not None) and (select == 1):
+			# Select parcels and buildings not selected cell
+			subtype = list(set(parcels[parcels['id_grid'].isin(list(cells['id']))]['Subtype']))[0]
 			parcels = parcels[~parcels['id_grid'].isin(list(cells['id']))]
 			buildings = buildings[~buildings['id_grid'].isin(list(cells['id']))]
+			# Get the difference between
 			diff = set([TYPES[i] for i in cells['clus_gmm']]).difference(set(sel_type))
 			if len(diff) > 0:
 				cells['clus_gmm'] = {v: k for k, v in TYPES.items()}[sel_type]
+				if 'High St' not in cells.columns:
+					cells = join_high_st(cells)
 				grid = Grid(cells, TILES, prefix=f"{prefix}_{list(cells['id'])}", land_use=land_use_gdf, diagonal_gdf=diagonal_gdf)
-				grid.test_assign_subtypes()
+				grid.gdf['Subtype'] = subtype
 				tiles = grid.test_place_tiles()
 
 				ind = build_scenario(tiles, prefix)
 				parcels = pd.concat([parcels, ind.parcels.copy()])
 				buildings = pd.concat([buildings, ind.buildings.copy()])
-				parcels.to_feather(f"data/feather/{prefix}parcels.feather")
+				parcels.to_feather(f"data/feather/{prefix}parcels_scene.feather")
 				buildings.loc[:, [c for c in ind.buildings.columns if c not in ['comm_units']]]. \
-					to_feather(f"data/feather/{prefix}buildings.feather")
+					to_feather(f"data/feather/{prefix}buildings_scene.feather")
 
 				# parcels = pd.concat([parcels, tiles[tiles['Type'] == 'prcls']])
 				# buildings = pd.concat([buildings, tiles[tiles['Type'] == 'bldgs']])
 
+				r.layers = [lay for lay in r.layers if lay.id in ['cells', 'open_spaces']]
 				for use in COLORS.keys():
 					r.layers.append(create_bld_layer(use, COLORS, buildings))
 
@@ -435,9 +450,10 @@ def main_callback(sel_type, rotate, flip_h, flip_v, select, memory, uploaded, fi
 
 	total_units = int(ind.get_residential_units()['res_units'].sum())
 	total_population = int(ind.get_resident_count()['res_count'].sum())
-
+	fsr = round(sum(ind.get_floor_area_by_land_use()['floor_area'])/sum(ind.parcels[ind.parcels['LANDUSE'] != 'OS'].area), 2)
+	max_height = f"Max height: {max(ind.buildings['height'])} m ({int(max(ind.buildings['height'])/3)} stories)"
 	print(f"Callback: {round((time.time() - stt), 3)} seconds with {[l.id for l in r.layers]} layers")
-	return dgl, area_by_lu, f"{total_units} units", f"{total_population} people", None
+	return dgl, area_by_lu, f"{total_units} units", f"{total_population} people", f"Mean FSR: {fsr}", max_height, None
 
 
 # Download contents
@@ -457,4 +473,7 @@ def download_layers(deck_div, n_clicks):
 
 
 if __name__ == '__main__':
-	app.run_server(debug=True, port=8080)
+	try:
+		app.run_server(debug=True, port=9000)
+	except:
+		app.run_server(debug=False, host='localhost', port=9000)

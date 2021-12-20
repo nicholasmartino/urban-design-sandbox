@@ -201,8 +201,8 @@ class Indicators:
 		self.buildings = self.get_height_from_storeis()
 		print("Indicators successfully extracted")
 
-		assert len(self.parcels[self.parcels['LANDUSE'] == 'OS']) > 0, AssertionError('Parcel layer has no open spaces (OS) under LANDUSE column')
-		self.buildings = self.remove_buildings_from_open_spaces()
+		if len(self.parcels[self.parcels['LANDUSE'] == 'OS']) > 0:
+			self.buildings = self.remove_buildings_from_open_spaces()
 		# self.parcels = self.remove_parcels_from_open_spaces()
 		self.buildings = self.join_land_use_from_parcels()
 		self.get_area_by_land_use()

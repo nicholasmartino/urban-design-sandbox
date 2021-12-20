@@ -49,21 +49,29 @@ layout = html.Div(
 					className='pretty_container',
 					children=[
 						dcc.Dropdown(id='type', options=[{'label': name, 'value': name} for name in types.keys()]),
+						html.Br(),
 						dbc.Row([
-							html.Button('Select', id='select', style={"width": "37%"}),
-							html.Button('Rotate', id='rotate', style={"width": "21%"}),
-							html.Button('Filp H', id='flip_h', style={"width": "21%"}),
-							html.Button('Flip V', id='flip_v', style={"width": "21%"}),
+							html.Button('Change', id='select', style={"width": "44%"}),
+							html.Div(style={'width': '10%'}),
+							html.Button('Rotate', id='rotate', style={"width": "12%"}),
+							html.Div(style={'width': '5%'}),
+							html.Button('Filp H', id='flip_h', style={"width": "12%"}),
+							html.Div(style={'width': '5%'}),
+							html.Button('Flip V', id='flip_v', style={"width": "12%"}),
 						]),
 						html.Br(),
 						html.Div(id="selected_type", style={"width": "100%", 'text-align': 'center'}),
 						dcc.Graph(id='cell_type_icon', style={'height': '20%'}),
-						dcc.Graph(id='area_by_lu', style={'height': '40%'}),
+						dcc.Graph(id='area_by_lu', style={'height': '35%'}),
 						dbc.Row([
-							html.Div(id='total_units', style=TEXT_INDICATOR)
-						]),
-						dbc.Row([
-							html.Div(id='total_population', style=TEXT_INDICATOR)
+							dbc.Col([
+								html.Div(id='total_units', style=TEXT_INDICATOR),
+								html.Div(id='total_population', style=TEXT_INDICATOR)
+							]),
+							dbc.Col([
+								html.Div(id='fsr', style=TEXT_INDICATOR),
+								html.Div(id='max_height', style=TEXT_INDICATOR)
+							]),
 						]),
 						html.Br(),
 						html.H5("Upload grid file"),
