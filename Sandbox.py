@@ -28,6 +28,8 @@ class Indicators:
 		gdf['area'] = gdf.area
 		gdf['parcelarea'] = gdf.area
 		gdf['far'] = gdf['floor_area']/gdf['area']
+		gdf['Floor Area Ratio'] = gdf['far']
+		gdf['Land Use'] = gdf['LANDUSE']
 		return gdf
 
 	def get_residential_units(self):
@@ -108,7 +110,10 @@ class Indicators:
 
 	def get_floor_area_by_land_use(self):
 		gdf = self.buildings.copy()
-		return pd.DataFrame(gdf.groupby('LANDUSE').sum()['floor_area'])
+		df = pd.DataFrame(gdf.groupby('LANDUSE').sum()['floor_area'])
+		df['LANDUSE'] = df.index
+		df = df.rename(columns={'floor_area': 'Floor Area (m²)', 'LANDUSE': 'Land Use'})
+		return df
 
 	def get_n_units_by_land_use(self):
 		gdf = self.buildings.copy()

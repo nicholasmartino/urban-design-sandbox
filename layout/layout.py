@@ -48,53 +48,63 @@ layout = html.Div(
 					},
 					className='pretty_container',
 					children=[
-						dcc.Dropdown(id='type', options=[{'label': name, 'value': name} for name in types.keys()]),
-						html.Br(),
-						dbc.Row([
-							html.Button('Change', id='select', style={"width": "44%"}),
-							html.Div(style={'width': '10%'}),
-							html.Button('Rotate', id='rotate', style={"width": "12%"}),
-							html.Div(style={'width': '5%'}),
-							html.Button('Filp H', id='flip_h', style={"width": "12%"}),
-							html.Div(style={'width': '5%'}),
-							html.Button('Flip V', id='flip_v', style={"width": "12%"}),
+						dcc.Tabs(className='custom-tab', children=[
+							dcc.Tab(label='Form & Function', children=[
+								# dcc.Dropdown(id='type', options=[{'label': name, 'value': name} for name in types.keys()]),
+								# dbc.Row([
+								# 	html.Button('Change', id='select', style={"width": "44%"}),
+								# 	html.Div(style={'width': '10%'}),
+								# 	html.Button('Rotate', id='rotate', style={"width": "12%"}),
+								# 	html.Div(style={'width': '5%'}),
+								# 	html.Button('Filp H', id='flip_h', style={"width": "12%"}),
+								# 	html.Div(style={'width': '5%'}),
+								# 	html.Button('Flip V', id='flip_v', style={"width": "12%"}),
+								# ]),
+								# html.Div(id="selected_type", style={"width": "100%", 'text-align': 'center'}),
+								# dcc.Graph(id='cell_type_icon', style={'height': '20%'}),
+								html.Br(),
+								dbc.Row([
+									dbc.Col([
+										html.Div(id='total_units', style=TEXT_INDICATOR),
+										html.Div(id='total_population', style=TEXT_INDICATOR)
+									]),
+									dbc.Col([
+										html.Div(id='fsr', style=TEXT_INDICATOR),
+										html.Div(id='max_height', style=TEXT_INDICATOR)
+									]),
+								]),
+								html.Br(),
+								dcc.Graph(id='area_by_lu', style={'height': '30vh'}),
+								html.Br(),
+								dcc.Graph(id='fsr_hist', style={'height': '30vh'}),
+								html.H5("Upload grid file"),
+								dcc.Upload(
+									id="upload",
+									children=html.Div([
+										'Drag and Drop or ',
+										html.A('Select Files')
+									]),
+									style={
+										'width': '95%',
+										'height': '50%',
+										'lineHeight': '60px',
+										'borderWidth': '1px',
+										'borderStyle': 'dashed',
+										'borderRadius': '5px',
+										'textAlign': 'center',
+										'margin': '10px'
+									},
+								),
+								html.Small(
+									"Accepted formats: GeoJSON, Shapefile. Must contain 'clus_gmm' and 'Subtype' columns")
+								]
+							),
+							dcc.Tab(label='Livability', children=[
+								dcc.Graph(id='dwelling_mix', style={'height': '30vh'}),
+								dcc.Graph(id='distances', style={'height': '30vh'}),
+							])
 						]),
-						html.Br(),
-						html.Div(id="selected_type", style={"width": "100%", 'text-align': 'center'}),
-						dcc.Graph(id='cell_type_icon', style={'height': '20%'}),
-						dcc.Graph(id='area_by_lu', style={'height': '35%'}),
-						dbc.Row([
-							dbc.Col([
-								html.Div(id='total_units', style=TEXT_INDICATOR),
-								html.Div(id='total_population', style=TEXT_INDICATOR)
-							]),
-							dbc.Col([
-								html.Div(id='fsr', style=TEXT_INDICATOR),
-								html.Div(id='max_height', style=TEXT_INDICATOR)
-							]),
-						]),
-						html.Br(),
-						html.H5("Upload grid file"),
-						dcc.Upload(
-							id="upload",
-							children=html.Div([
-								'Drag and Drop or ',
-								html.A('Select Files')
-							]),
-							style={
-								'width': '95%',
-								'height': '50%',
-								'lineHeight': '60px',
-								'borderWidth': '1px',
-								'borderStyle': 'dashed',
-								'borderRadius': '5px',
-								'textAlign': 'center',
-								'margin': '10px'
-							},
-						),
-						html.Small("Accepted formats: GeoJSON, Shapefile. Must contain 'clus_gmm' and 'Subtype' columns")
-					]
-				),
+					]),
 
 				# Right download button
 				dbc.Col(

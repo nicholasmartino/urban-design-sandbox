@@ -14,6 +14,7 @@ import pydeck as pdk
 from dash.dependencies import Output, Input, State
 from dash_deck import DeckGL
 from shapely.geometry import Polygon
+import plotly.figure_factory as ff
 
 from Grid import Grid
 from Inputs import TYPES, GRID_GDF, TILE_GDF, GRID_FILE, STREETS
@@ -46,10 +47,12 @@ COLORS = {
 }
 color_discrete_map = {key: f'rgb{tuple(i)}' for key, i in COLORS.items()}
 template = dict(layout=go.Layout(
-	title_font=dict(family="Roboto", size=24),
+	title_font=dict(family="Roboto", size=14),
 	font=dict(family="Roboto"),
+	margin=dict(l=60, r=20, t=20, b=60),
 	paper_bgcolor='rgba(0,0,0,0)',
 	plot_bgcolor='rgba(0,0,0,0)',
+	showlegend=False
 ))
 # Dash Leaflet parameters
 MAP_ID = "map-id"
@@ -247,22 +250,24 @@ def update_image(memory):
 @app.callback(
 	Output(component_id="deck_div", component_property="children"),
 	Output(component_id="area_by_lu", component_property="figure"),
+	Output(component_id="fsr_hist", component_property="figure"),
+	Output(component_id="dwelling_mix", component_property="figure"),
 	Output(component_id="total_units", component_property="children"),
 	Output(component_id="total_population", component_property="children"),
 	Output(component_id="fsr", component_property="children"),
 	Output(component_id="max_height", component_property="children"),
 	Output(component_id="loading-output-1", component_property="children"),
 	[
-		Input(component_id="type", component_property="value"),
-		Input(component_id='rotate', component_property='n_clicks'),
-		Input(component_id='flip_h', component_property='n_clicks'),
-		Input(component_id='flip_v', component_property='n_clicks'),
-		Input(component_id='select', component_property='n_clicks'),
+		# Input(component_id="type", component_property="value"),
+		# Input(component_id='rotate', component_property='n_clicks'),
+		# Input(component_id='flip_h', component_property='n_clicks'),
+		# Input(component_id='flip_v', component_property='n_clicks'),
+		# Input(component_id='select', component_property='n_clicks'),
 		Input(component_id='memory', component_property='data'),
 		Input(component_id='upload', component_property='contents'),
 		State(component_id='upload', component_property='filename')
 	])  # , State('input-on-submit', 'value'))
-def main_callback(sel_type, rotate, flip_h, flip_v, change, memory, uploaded, file_name):
+def main_callback(memory, uploaded, file_name):
 	stt = time.time()
 	types_named = {t: i for i, t in enumerate(types)}
 
@@ -384,6 +389,7 @@ def main_callback(sel_type, rotate, flip_h, flip_v, change, memory, uploaded, fi
 			ind.parcels.to_feather(f"data/feather/{prefix}parcels.feather")
 			ind.buildings.loc[:, [c for c in ind.buildings.columns if c not in ['comm_units']]]. \
 				to_feather(f"data/feather/{prefix}buildings.feather")
+			tiles.loc[:, [col for col in tiles.columns if col not in ['laneway']]].to_feather(all_layers_file)
 
 		# Create buildings and parcels layers
 		parcels_pdk, open_pdk = create_pcl_layers(parcels)
@@ -393,9 +399,30 @@ def main_callback(sel_type, rotate, flip_h, flip_v, change, memory, uploaded, fi
 			r.layers.append(create_bld_layer(use, COLORS, buildings))
 
 		area_by_lu = px.bar(
-			ind.get_area_by_land_use(), x='Land Use', y='Area (m²)', template=template,
+			ind.get_floor_area_by_land_use(), x='Land Use', y='Floor Area (m²)', title='Floor Area by Land Use',
+			template=template, color='Land Use', color_discrete_map=color_discrete_map
+		)
+		fsr = ind.get_parcel_far().dropna(subset=['far'])
+		fsr_hist = px.histogram(
+			fsr, x='Floor Area Ratio', template=template,
 			color='Land Use', color_discrete_map=color_discrete_map
 		)
+
+		res_uses = ['SFD', 'SFA', 'MFM', 'MFL', 'MFH']
+		fsr.loc[fsr['Land Use'].isin(res_uses), 'lu_type'] = 'Residential'
+		fsr.loc[~fsr['Land Use'].isin(res_uses), 'lu_type'] = 'Non-Residential'
+		fsr.loc[fsr['Land Use'] == 'MX', 'lu_type'] = 'Mixed'
+
+		fsr_hist = ff.create_distplot(
+			[list(fsr.loc[fsr['lu_type'] == u, 'Floor Area Ratio']) for u in fsr['lu_type'].unique()],
+			group_labels=fsr['lu_type'].unique(), # colors=[COLORS['SFD'], COLORS['MX'], COLORS['IND']]
+		)
+		fsr_hist.update_layout(template['layout'], title={'text': 'Floor Area Ratio'})
+
+		dwelling_mix = None  #px.bar(
+		# 	ind.get_dwelling_mix(), x='', y='Dwelling Type', template=template,
+		# 	color='Dwelling Type', color_discrete_map=color_discrete_map
+		# )
 
 	else:
 		prefix = GRID_FILE.split('.')[0]
@@ -458,10 +485,10 @@ def main_callback(sel_type, rotate, flip_h, flip_v, change, memory, uploaded, fi
 
 	total_units = int(ind.get_residential_units()['res_units'].sum())
 	total_population = int(ind.get_resident_count()['res_count'].sum())
-	fsr = round(sum(ind.get_floor_area_by_land_use()['floor_area'])/sum(ind.parcels[ind.parcels['LANDUSE'] != 'OS'].area), 2)
+	fsr = round(sum(ind.get_floor_area_by_land_use()['Floor Area (m²)'])/sum(ind.parcels[ind.parcels['LANDUSE'] != 'OS'].area), 2)
 	max_height = f"Max height: {max(ind.buildings['height'])} m ({int(max(ind.buildings['height'])/3)} stories)"
 	print(f"Callback: {round((time.time() - stt), 3)} seconds with {[l.id for l in r.layers]} layers")
-	return dgl, area_by_lu, f"{total_units} units", f"{total_population} people", f"Mean FSR: {fsr}", max_height, None
+	return dgl, area_by_lu, fsr_hist, dwelling_mix, f"{total_units} units", f"{total_population} people", f"Mean FSR: {fsr}", max_height, None
 
 
 # Download contents
