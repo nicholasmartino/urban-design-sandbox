@@ -23,7 +23,12 @@ class Indicators:
 		return gdf
 
 	def get_dwelling_mix(self):
-		return
+		gdf = self.buildings.copy()
+		gdf = gdf[gdf['LANDUSE'].isin(['MFL', 'MFM', 'MFH', 'SFD', 'SFA', 'MX'])]
+		df = gdf.groupby('LANDUSE').sum()
+		df['Dwelling Type'] = df.index
+		df['Floor Area'] = df['floor_area']
+		return df.reset_index(drop=True)
 
 	def get_parcel_far(self):
 		gdf = self.parcels.copy()

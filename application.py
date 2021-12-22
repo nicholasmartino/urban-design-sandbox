@@ -420,7 +420,7 @@ def main_callback(memory, uploaded, file_name):
 		fsr_hist.update_layout(template['layout'], title={'text': 'Floor / Parcel Area Ratio (FAR)'})
 
 		dwelling_mix = px.bar(
-			ind.get_dwelling_mix(), x='', y='Dwelling Type', template=template,
+			ind.get_dwelling_mix(), x='Floor Area', y='Dwelling Type', template=template,
 			color='Dwelling Type', color_discrete_map=color_discrete_map
 		)
 
@@ -508,7 +508,8 @@ def download_layers(deck_div, n_clicks):
 
 
 if __name__ == '__main__':
-	try:
-		app.run_server(debug=True, port=9000)
-	except:
-		app.run_server(debug=False, host='localhost', port=9000)
+	# try:
+	# 	app.run_server(debug=True, port=9000)
+	# except:
+	#
+	app.run_server(debug=True, host='localhost', port=9000)
