@@ -417,12 +417,12 @@ def main_callback(memory, uploaded, file_name):
 			[list(fsr.loc[fsr['lu_type'] == u, 'Floor Area Ratio']) for u in fsr['lu_type'].unique()],
 			group_labels=fsr['lu_type'].unique(), # colors=[COLORS['SFD'], COLORS['MX'], COLORS['IND']]
 		)
-		fsr_hist.update_layout(template['layout'], title={'text': 'Floor Area Ratio'})
+		fsr_hist.update_layout(template['layout'], title={'text': 'Floor / Parcel Area Ratio (FAR)'})
 
-		dwelling_mix = None  #px.bar(
-		# 	ind.get_dwelling_mix(), x='', y='Dwelling Type', template=template,
-		# 	color='Dwelling Type', color_discrete_map=color_discrete_map
-		# )
+		dwelling_mix = px.bar(
+			ind.get_dwelling_mix(), x='', y='Dwelling Type', template=template,
+			color='Dwelling Type', color_discrete_map=color_discrete_map
+		)
 
 	else:
 		prefix = GRID_FILE.split('.')[0]

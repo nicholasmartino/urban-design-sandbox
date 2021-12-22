@@ -22,6 +22,9 @@ class Indicators:
 		gdf['floor_area'] = gdf['area'] * pd.to_numeric(gdf['maxstories'])
 		return gdf
 
+	def get_dwelling_mix(self):
+		return
+
 	def get_parcel_far(self):
 		gdf = self.parcels.copy()
 		gdf['floor_area'] = Analyst(gdf, self.buildings.loc[:, ['floor_area', 'geometry']]).spatial_join(operations=['max'])['floor_area_max']
@@ -58,7 +61,9 @@ class Indicators:
 				(gdf.area/gdf['unit_area']) * gdf['maxstories']).fillna(0).replace(np.inf, 0).astype(int)
 		gdf.loc[(gdf['LANDUSE'] == 'SFD') & (gdf['laneway'] == 0), 'res_units'] = 1
 		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = ((gdf.area/gdf['unit_area']) * (gdf['maxstories'] - 1)).fillna(0).replace(-np.inf, 0).astype(int)
-		gdf['res_units'] = gdf['res_units'].fillna(0).astype(int)
+
+		gdf['res_units'] = gdf['res_units'].fillna(0).astype(float)
+		# gdf['res_units'] = gdf['res_units'].fillna(0).astype(int)
 		return gdf
 
 	def get_commercial_units(self, unit_area=100):
@@ -82,6 +87,7 @@ class Indicators:
 		gdf.loc[gdf['cell_type'] == 'Typical_Van_SF', 'res_count'] = 2.404 * gdf.loc[gdf['cell_type'] == 'Typical_Van_SF', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Typical_Van_West_SF', 'res_count'] = 2.307 * gdf.loc[gdf['cell_type'] == 'Typical_Van_West_SF', 'res_units']
 		# Numbers from census canada dissemination areas: Average people per dwelling (Population, 2016 / n_dwellings)
+		gdf['res_count'] = gdf['res_count'].astype(float)
 		return gdf
 
 	def remove_buildings_from_open_spaces(self):

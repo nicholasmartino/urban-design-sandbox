@@ -2,12 +2,13 @@ import os
 
 import geopandas as gpd
 import pandas as pd
-os.chdir('/Volumes/GoogleDrive/My Drive/Python/urban-design-sandbox')
+os.chdir('/users/nicholasmartino/Python/urban-design-sandbox')
 
 from Inputs import SERVER_DIR
 from Sandbox import Indicators
 
 TILES = gpd.read_feather('data/feather/all_tiles.feather')
+TILES = gpd.read_file('/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/elementslab/Version_3/all_tiles-new/all_tiles-new.shp')
 
 summary = pd.DataFrame()
 for cell_type in TILES['cell_type'].unique():
@@ -40,6 +41,7 @@ summary = summary.fillna(0)
 summary['Residents'] = summary['Residents'].astype(int)
 summary['Max Height (m)'] = summary['Max Height (m)'].astype(int)
 summary = summary.sort_values('FAR', ascending=False)
-summary.to_csv(f'{SERVER_DIR}/Sandbox/Stats by Tiles.csv')
+summary.to_csv('Stats by Tiles.csv')
+# summary.to_csv(f'{SERVER_DIR}/Sandbox/Stats by Tiles.csv')
 print(summary)
-print(f'{SERVER_DIR}/Sandbox/Stats by Tiles.csv')
+# print(f'{SERVER_DIR}/Sandbox/Stats by Tiles.csv')
