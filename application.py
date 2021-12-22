@@ -508,8 +508,7 @@ def download_layers(deck_div, n_clicks):
 
 
 if __name__ == '__main__':
-	# try:
-	# 	app.run_server(debug=True, port=9000)
-	# except:
-	#
-	app.run_server(debug=True, host='localhost', port=9000)
+	try:
+		app.run_server(debug=True, port=9000)
+	except:
+		app.run_server(debug=False, host='localhost', port=9000)
