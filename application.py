@@ -5,7 +5,7 @@ import sys
 import time
 
 import dash
-import dash_html_components as html
+from dash import html
 import geopandas as gpd
 import pandas as pd
 import plotly.express as px
