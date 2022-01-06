@@ -107,3 +107,4 @@ Werkzeug==2.0.1
 wheel==0.37.0
 widgetsnbextension==3.5.2
 xyzservices==2021.11.0
+zappa==0.54.1
