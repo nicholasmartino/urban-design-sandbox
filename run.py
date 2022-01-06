@@ -1,10 +1,10 @@
 import pandas as pd
 import sys
-from Grid import Grid
+from models.Grid import Grid
 import geopandas as gpd
-from Sandbox import Scenario, Indicators
-from Tiles import TILES
-from Inputs import TYPES, GRID_FILES, GRID_DIR, STREETS, OUT_DIR
+from models.Sandbox import Scenario, Indicators
+from models.Tiles import TILES
+from store import TYPES, GRID_FILES, GRID_DIR, STREETS, OUT_DIR
 
 for file in GRID_FILES:
 	grid_file = f'{GRID_DIR}/{file}'

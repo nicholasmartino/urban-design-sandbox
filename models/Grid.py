@@ -3,8 +3,8 @@ import gc
 import pandas as pd
 from tqdm import tqdm
 
-from Inputs import *
-from ShapeTools import Shape, Analyst
+from store import *
+from models.ShapeTools import Shape, Analyst
 
 
 class Grid:

@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from Inputs import *
-from Network import Streets
-from ShapeTools import Shape, Analyst
+from store import *
+from models.Network import Streets
+from models.ShapeTools import Shape, Analyst
 
 
 class Indicators:

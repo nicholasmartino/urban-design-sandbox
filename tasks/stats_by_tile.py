@@ -4,8 +4,7 @@ import geopandas as gpd
 import pandas as pd
 os.chdir('/users/nicholasmartino/Python/urban-design-sandbox')
 
-from Inputs import SERVER_DIR
-from Sandbox import Indicators
+from models.Sandbox import Indicators
 
 TILES = gpd.read_feather('data/feather/all_tiles.feather')
 TILES = gpd.read_file('/Volumes/SALA/Research/eLabs/50_projects/20_City_o_Vancouver/SSHRC Partnership Engage/Sandbox/shp/elementslab/Version_3/all_tiles-new/all_tiles-new.shp')

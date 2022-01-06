@@ -13,13 +13,12 @@ from dash.dependencies import Output, Input, State
 from dash_deck import DeckGL
 from shapely.geometry import Polygon
 
-from Grid import Grid
-from Inputs import *
-from Inputs import TYPES
-from Sandbox import Scenario, Indicators
-from Tiles import TILES
+from models.Grid import Grid
+from store import *
+from store import TYPES
+from models.Sandbox import Scenario, Indicators
+from models.Tiles import TILES
 from app import app
-from app import server
 from layout.layout import GRID_FILE, types
 
 random_seed = 0

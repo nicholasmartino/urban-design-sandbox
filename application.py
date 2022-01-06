@@ -9,19 +9,19 @@ import dash_html_components as html
 import geopandas as gpd
 import pandas as pd
 import plotly.express as px
+import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import pydeck as pdk
 from dash.dependencies import Output, Input, State
 from dash_deck import DeckGL
 from shapely.geometry import Polygon
-import plotly.figure_factory as ff
 
-from Grid import Grid
-from Inputs import TYPES, GRID_GDF, TILE_GDF, GRID_FILE, STREETS
-from Sandbox import Scenario, Indicators
-from Tiles import TILES
 from layout.layout import layout
 from layout.layout import types
+from models.Grid import Grid
+from models.Sandbox import Scenario, Indicators
+from models.Tiles import TILES
+from store import TYPES, GRID_GDF, TILE_GDF, GRID_FILE, STREETS
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -312,44 +312,6 @@ def main_callback(memory, uploaded, file_name):
 		cell_id = f"{cell_gdf.loc[0, 'id']}"
 		pick_geometry(r, cell_gdf, cell_id)
 
-	"""
-	elif button_id == 'select':
-		# Get selected cells
-		for i in [lay.id for lay in r.layers]:
-			if i.isnumeric():
-
-				sel_cell = grid_gdf.loc[[int(i)], :].to_crs(26910)
-
-				if sel_type == 'Typical Van SF':
-					tp_gdf = gpd.read_file("/Users/nicholasmartino/Desktop/Sandbox Tiles/Typical_Van_SF.geojson")
-
-				tp_uu = tp_gdf.to_crs(26910).unary_union
-				tp_ctr = tp_uu.centroid
-				cell_ctr = sel_cell.unary_union.centroid
-
-				# Get difference between origin and destination geometry
-				x_off = cell_ctr.x - tp_ctr.x
-				y_off = cell_ctr.y - tp_ctr.y
-
-				# Move one shape to a certain point
-				tp_gdf = gpd.GeoDataFrame({
-					'geometry': [translate(geom, x_off, y_off) for geom in tp_gdf['geometry']]}, crs=26910)
-
-				r.layers.append(pdk.Layer(
-					id=f"{sel_type}_{i}",
-					type="GeoJsonLayer",
-					data=tp_gdf.to_crs(4326),
-					stroked=True,
-					wireframe=True,
-					opacity=0.2,
-					getFillColor=[180, 180, 0],
-					get_line_color=[0, 0, 0],
-					get_line_width=0.5,
-					auto_highlight=True,
-					pickable=False
-				))
-	"""
-
 	if memory is None:
 		# Run grids
 		if 'Type' not in grid_gdf.columns:
@@ -432,38 +394,6 @@ def main_callback(memory, uploaded, file_name):
 
 		cells = gdf_from_memory(memory).to_crs(26910)
 		cells['Type'] = cells['clus_gmm'].replace(TYPES)
-		if (sel_type is not None) and (change == 1):
-			# Select parcels and buildings not selected cell
-			subtype = list(set(parcels[parcels['id_grid'].isin(list(cells['id']))]['Subtype']))[0]
-			parcels = parcels[~parcels['id_grid'].isin(list(cells['id']))]
-			buildings = buildings[~buildings['id_grid'].isin(list(cells['id']))]
-			# Get the difference between
-			diff = set([TYPES[i] for i in cells['clus_gmm']]).difference(set(sel_type))
-			if len(diff) > 0:
-				cells['clus_gmm'] = {v: k for k, v in TYPES.items()}[sel_type]
-				if 'High St' not in cells.columns:
-					cells = join_high_st(cells)
-				grid = Grid(cells, TILES, prefix=f"{prefix}_{list(cells['id'])}", land_use=land_use_gdf, diagonal_gdf=diagonal_gdf)
-				grid.gdf['Subtype'] = subtype
-				grid.gdf['Type'] = sel_type
-				tiles = grid.test_place_tiles()
-
-				ind = build_scenario(tiles, prefix)
-				parcels = pd.concat([parcels, ind.parcels.copy()])
-				buildings = pd.concat([buildings, ind.buildings.copy()])
-				parcels.to_feather(f"data/feather/{prefix}parcels_scene.feather")
-				buildings.loc[:, [c for c in ind.buildings.columns if c not in ['comm_units']]]. \
-					to_feather(f"data/feather/{prefix}buildings_scene.feather")
-
-				# parcels = pd.concat([parcels, tiles[tiles['Type'] == 'prcls']])
-				# buildings = pd.concat([buildings, tiles[tiles['Type'] == 'bldgs']])
-
-				r.layers = [lay for lay in r.layers if lay.id in ['cells', 'open_spaces']]
-				for use in COLORS.keys():
-					r.layers.append(create_bld_layer(use, COLORS, buildings))
-				parcels_pdk, open_pdk = create_pcl_layers(parcels)
-				r.layers.append(parcels_pdk)
-				r.layers.append(open_pdk)
 
 		in_cell_bld = gpd.overlay(buildings, cells.loc[:, ['geometry']])
 		in_cell_pcl = gpd.overlay(parcels, cells.loc[:, ['geometry']])

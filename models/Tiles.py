@@ -1,7 +1,7 @@
 import gc
 
-from Inputs import *
-from Tile import Tile
+from store import *
+from models.Tile import Tile
 
 assert 'cell_type' in TILE_GDF.columns
 assert 'Subtype' in TILE_GDF.columns

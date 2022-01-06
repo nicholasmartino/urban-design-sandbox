@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ShapeTools import Shape
+from models.ShapeTools import Shape
 
 
 class Tile:
