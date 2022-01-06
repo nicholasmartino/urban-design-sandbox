@@ -5,13 +5,13 @@ import sys
 import time
 
 import dash
-from dash import html
 import geopandas as gpd
 import pandas as pd
 import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import pydeck as pdk
+from dash import html
 from dash.dependencies import Output, Input, State
 from dash_deck import DeckGL
 from shapely.geometry import Polygon
