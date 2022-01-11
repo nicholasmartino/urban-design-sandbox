@@ -23,7 +23,10 @@ from models.Sandbox import Scenario, Indicators
 from models.Tiles import TILES
 from store import TYPES, GRID_GDF, TILE_GDF, GRID_FILE, STREETS
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+external_stylesheets = [
+	'https://fonts.googleapis.com/css2?family=Roboto&display=swap',
+	'https://codepen.io/chriddyp/pen/bWLwgP.css'
+]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = layout
 
@@ -47,8 +50,8 @@ COLORS = {
 }
 color_discrete_map = {key: f'rgb{tuple(i)}' for key, i in COLORS.items()}
 template = dict(layout=go.Layout(
-	title_font=dict(family="Roboto", size=14),
-	font=dict(family="Roboto"),
+	title_font=dict(family="Roboto Light", size=14),
+	font=dict(family="Roboto Light"),
 	margin=dict(l=60, r=20, t=20, b=60),
 	paper_bgcolor='rgba(0,0,0,0)',
 	plot_bgcolor='rgba(0,0,0,0)',
@@ -135,12 +138,12 @@ def create_bld_layer(l_use, colors, buildings):
 
 def create_pcl_layers(gdf):
 	parcels_pdk = pdk.Layer(
-			id=f"parcels",
-			type="GeoJsonLayer",
-			opacity=0.2,
-			data=gdf.loc[gdf['LANDUSE'] != 'OS', ['geometry']].to_crs(4326),
-			getFillColor=[180, 180, 180],
-		)
+		id=f"parcels",
+		type="GeoJsonLayer",
+		opacity=0.2,
+		data=gdf.loc[gdf['LANDUSE'] != 'OS', ['geometry']].to_crs(4326),
+		getFillColor=[180, 180, 180],
+	)
 	open_pdk = pdk.Layer(
 		id=f"open_spaces",
 		type="GeoJsonLayer",
@@ -317,7 +320,8 @@ def main_callback(memory, uploaded, file_name):
 		if 'Type' not in grid_gdf.columns:
 			grid_gdf['id'] = grid_gdf.index
 			grid_gdf['Type'] = grid_gdf['clus_gmm'].replace(TYPES)
-			grid_gdf.loc[grid_gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
+			grid_gdf.loc[
+				grid_gdf['Type'].isin(['Mid_High_Street', 'Moderate_Density', 'Dense_Nodal']), 'High St Type'] = 1
 		if 'High St' not in grid_gdf.columns:
 			grid_gdf = join_high_st(grid_gdf)
 
@@ -377,7 +381,7 @@ def main_callback(memory, uploaded, file_name):
 
 		fsr_hist = ff.create_distplot(
 			[list(fsr.loc[fsr['lu_type'] == u, 'Floor Area Ratio']) for u in fsr['lu_type'].unique()],
-			group_labels=fsr['lu_type'].unique(), # colors=[COLORS['SFD'], COLORS['MX'], COLORS['IND']]
+			group_labels=fsr['lu_type'].unique(),  # colors=[COLORS['SFD'], COLORS['MX'], COLORS['IND']]
 		)
 		fsr_hist.update_layout(template['layout'], title={'text': 'Floor / Parcel Area Ratio (FAR)'})
 
@@ -415,10 +419,12 @@ def main_callback(memory, uploaded, file_name):
 
 	total_units = int(ind.get_residential_units()['res_units'].sum())
 	total_population = int(ind.get_resident_count()['res_count'].sum())
-	fsr = round(sum(ind.get_floor_area_by_land_use()['Floor Area (m²)'])/sum(ind.parcels[ind.parcels['LANDUSE'] != 'OS'].area), 2)
-	max_height = f"Max height: {max(ind.buildings['height'])} m ({int(max(ind.buildings['height'])/3)} stories)"
+	fsr = round(sum(ind.get_floor_area_by_land_use()['Floor Area (m²)']) / sum(
+		ind.parcels[ind.parcels['LANDUSE'] != 'OS'].area), 2)
+	max_height = f"Max height: {max(ind.buildings['height'])} m ({int(max(ind.buildings['height']) / 3)} stories)"
 	print(f"Callback: {round((time.time() - stt), 3)} seconds with {[l.id for l in r.layers]} layers")
-	return dgl, area_by_lu, fsr_hist, dwelling_mix, f"{total_units} units", f"{total_population} people", f"Mean FSR: {fsr}", max_height, None
+	return dgl, area_by_lu, fsr_hist, dwelling_mix, f"{total_units} units", f"{total_population} people", \
+		   f"Mean FSR: {fsr}", max_height, None
 
 
 # Download contents
@@ -438,7 +444,4 @@ def download_layers(deck_div, n_clicks):
 
 
 if __name__ == '__main__':
-	try:
-		app.run_server(debug=True, port=9000)
-	except:
-		app.run_server(debug=False, host='localhost', port=9000)
+	app.run_server(debug=False, host='0.0.0.0')
