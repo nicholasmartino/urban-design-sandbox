@@ -11,7 +11,9 @@ assert 'block' in TILE_GDF['Type'].unique()
 
 TILES = []
 for tp in TILE_GDF['cell_type'].unique():
-	for st in TILE_GDF[TILE_GDF['cell_type'] == tp]['Subtype'].dropna().unique():
+	unique = TILE_GDF[TILE_GDF['cell_type'] == tp]['Subtype'].unique()
+	print(f"{tp}: {unique}")
+	for st in unique:
 		tile = Tile(
 			name=tp,
 			buildings=TILE_GDF[(TILE_GDF['Type'] == 'bldgs') & (TILE_GDF['cell_type'] == tp) & (TILE_GDF['Subtype'] == st)],

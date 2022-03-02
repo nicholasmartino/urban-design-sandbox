@@ -30,6 +30,20 @@ class Indicators:
 		df['Floor Area'] = df['floor_area']
 		return df.reset_index(drop=True)
 
+	def get_proximity(self):
+		pcl = self.parcels.copy()
+		dfs = pd.DataFrame()
+		for use in ['OS', 'CV', 'MX', 'CM']:
+			df = pd.DataFrame()
+			uu = pcl[pcl['LANDUSE'] == use].unary_union
+			df[f'proximity'] = [geom.distance(uu) for geom in pcl.geometry]
+			df['land_use'] = use
+			dfs = pd.concat([dfs, df])
+		dfs['Land Use'] = dfs['land_use']
+		dfs['Proximity (m)'] = dfs['proximity']
+		dfs = dfs[dfs['proximity'] != 0]
+		return dfs
+
 	def get_parcel_far(self):
 		gdf = self.parcels.copy()
 		gdf['floor_area'] = Analyst(gdf, self.buildings.loc[:, ['floor_area', 'geometry']]).spatial_join(operations=['max'])['floor_area_max']
@@ -53,8 +67,11 @@ class Indicators:
 		gdf.loc[(gdf['cell_type'] == 'Mid_High_Street') & (gdf['laneway'] != '1'), 'unit_area'] = 1441/sqft_sqm
 		gdf.loc[(gdf['cell_type'] == 'Coarse_Grain') & (gdf['laneway'] != '1'), 'unit_area'] = 2194/sqft_sqm
 		gdf.loc[(gdf['cell_type'] == 'Moderate_Density') & (gdf['laneway'] != '1'), 'unit_area'] = 1396/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Moderate_Industrial') & (gdf['laneway'] != '1'), 'unit_area'] = 1396/sqft_sqm
 		gdf.loc[(gdf['cell_type'] == 'Treed_Large_Home') & (gdf['laneway'] != '1'), 'unit_area'] = 2468/sqft_sqm
 		gdf.loc[(gdf['cell_type'] == 'Dense_Nodal') & (gdf['laneway'] != '1'), 'unit_area'] = 1474/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Dense_TOD') & (gdf['laneway'] != '1'), 'unit_area'] = 1474/sqft_sqm
+		gdf.loc[(gdf['cell_type'] == 'Dense_Industrial') & (gdf['laneway'] != '1'), 'unit_area'] = 1474/sqft_sqm
 		gdf.loc[(gdf['cell_type'] == 'Typical_Van_SF') & (gdf['laneway'] != '1'), 'unit_area'] = 1537/sqft_sqm
 		gdf.loc[(gdf['cell_type'] == 'Typical_Van_West_SF') & (gdf['laneway'] != '1'), 'unit_area'] = 2058/sqft_sqm
 		gdf['unit_area'] = gdf['unit_area'].fillna(0).replace(-np.inf, 0)
@@ -66,7 +83,6 @@ class Indicators:
 				(gdf.area/gdf['unit_area']) * gdf['maxstories']).fillna(0).replace(np.inf, 0).astype(int)
 		gdf.loc[(gdf['LANDUSE'] == 'SFD') & (gdf['laneway'] == 0), 'res_units'] = 1
 		gdf.loc[gdf['LANDUSE'] == 'MX', 'res_units'] = ((gdf.area/gdf['unit_area']) * (gdf['maxstories'] - 1)).fillna(0).replace(-np.inf, 0).astype(int)
-
 		gdf['res_units'] = gdf['res_units'].fillna(0).astype(float)
 		# gdf['res_units'] = gdf['res_units'].fillna(0).astype(int)
 		return gdf
@@ -87,8 +103,11 @@ class Indicators:
 		gdf.loc[gdf['cell_type'] == 'Mid_High_Street', 'res_count'] = 1.967 * gdf.loc[gdf['cell_type'] == 'Mid_High_Street', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Coarse_Grain', 'res_count'] = 1.753 * gdf.loc[gdf['cell_type'] == 'Coarse_Grain', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Moderate_Density', 'res_count'] = 1.894 * gdf.loc[gdf['cell_type'] == 'Moderate_Density', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Moderate_Industrial', 'res_count'] = 1.894 * gdf.loc[gdf['cell_type'] == 'Moderate_Industrial', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Treed_Large_Home', 'res_count'] = 1.929 * gdf.loc[gdf['cell_type'] == 'Treed_Large_Home', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Dense_Nodal', 'res_count'] = 1.653 * gdf.loc[gdf['cell_type'] == 'Dense_Nodal', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Dense_TOD', 'res_count'] = 1.653 * gdf.loc[gdf['cell_type'] == 'Dense_TOD', 'res_units']
+		gdf.loc[gdf['cell_type'] == 'Dense_Industrial', 'res_count'] = 1.653 * gdf.loc[gdf['cell_type'] == 'Dense_Industrial', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Typical_Van_SF', 'res_count'] = 2.404 * gdf.loc[gdf['cell_type'] == 'Typical_Van_SF', 'res_units']
 		gdf.loc[gdf['cell_type'] == 'Typical_Van_West_SF', 'res_count'] = 2.307 * gdf.loc[gdf['cell_type'] == 'Typical_Van_West_SF', 'res_units']
 		# Numbers from census canada dissemination areas: Average people per dwelling (Population, 2016 / n_dwellings)

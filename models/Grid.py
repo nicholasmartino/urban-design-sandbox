@@ -31,7 +31,7 @@ class Grid:
 		assert 'LANDUSE' in self.land_use.columns, KeyError("LANDUSE column not found in land_use layer")
 
 	def assign_subtypes_by_adjency(self, consider_vertices=True):
-		subtypes={
+		subtypes = {
 			'Horizontal': [
 				{0}, {2}, {5}, {6}, {7},
 				{0, 2}, {4, 7},
@@ -98,6 +98,7 @@ class Grid:
 			return gdf
 		else:
 			print("No High St type found")
+			return gdf
 
 	def get_real_place_land_use(self, land_uses):
 		real_land_use_gdf = self.land_use[self.land_use['LANDUSE'].isin(land_uses)].copy()

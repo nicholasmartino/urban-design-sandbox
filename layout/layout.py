@@ -1,5 +1,6 @@
 import dash_bootstrap_components as dbc
 import dash_extensions as de
+import dash_daq as daq
 from dash import dcc
 from dash import html
 
@@ -21,6 +22,9 @@ TEXT_INDICATOR = {'opacity': '1.0', 'margin-left': '30px'}
 
 layout = html.Div(
 	children=[
+		dcc.ConfirmDialog(
+			id='test-error',
+		),
 		dcc.Store(id='memory'),
 		dbc.Col(
 			style={'height': '99vh', 'width': '100%', 'offset': 0, 'display': 'inline-block'},
@@ -74,9 +78,9 @@ layout = html.Div(
 									]),
 								]),
 								html.Br(),
-								dcc.Graph(id='area_by_lu', style={'height': '30vh'}),
+								dcc.Graph(id='area_by_lu', style={'height': '27vh'}),
 								html.Br(),
-								dcc.Graph(id='fsr_hist', style={'height': '30vh'}),
+								dcc.Graph(id='fsr_hist', style={'height': '27vh'}),
 								html.H5("Upload grid file"),
 								dcc.Upload(
 									id="upload",
@@ -96,12 +100,31 @@ layout = html.Div(
 									},
 								),
 								html.Small(
-									"Accepted formats: GeoJSON, Shapefile. Must contain 'clus_gmm' and 'Subtype' columns")
+									"Accepted formats: GeoJSON, Shapefile. Must contain 'clus_gmm' and 'Subtype' columns"),
+								html.Br(),
+								html.Br(),
+								dbc.Row([
+									dbc.Col([
+										html.H5("Update if exists")
+									]),
+									dbc.Col([
+										daq.ToggleSwitch(
+											id='update_sandbox',
+											value=False,
+											style={'width': '100%'},
+										),
+									])
+								]),
+
 								]
 							),
 							dcc.Tab(label='Livability', children=[
+								html.Br(),
+								html.Br(),
 								dcc.Graph(id='dwelling_mix', style={'height': '30vh'}),
-								dcc.Graph(id='distances', style={'height': '30vh'}),
+								html.Br(),
+								html.Br(),
+								dcc.Graph(id='proximity', style={'height': '30vh'}),
 							])
 						]),
 					]),
