@@ -1,3 +1,6 @@
+### Dashboard
+![Dashboard layout](https://raw.githubusercontent.com/nicholasmartino/portfolio/master/static/img/urban_types_sandbox.jpg)
+
 ### Run
 Download and install [Python](https://www.python.org/downloads/) \
 Clone the repository
