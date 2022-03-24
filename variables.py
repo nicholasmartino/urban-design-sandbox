@@ -37,3 +37,7 @@ COLORS = {
     14: 'B37D80',
     15: '985277'
 }
+SERVER_DIR = "R:/Research/eLabs/50_projects/20_City_o_Vancouver"
+TILE_DIR = f"{SERVER_DIR}/22_SSHRC Partnership Engage/02_shapefiles"
+NETWORK_DIR = f"{SERVER_DIR}/SSHRC Partnership Engage/Sandbox/shp/elementslab/Version_3"
+FEATHER_DIR = "../data/feather"

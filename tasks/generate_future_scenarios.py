@@ -27,7 +27,10 @@ plan_gdf.loc[
     'cell_type'
 ] = "Mid_High_Street"
 
-plan_gdf.loc[plan_gdf['ZoneType'] == 'Residential RM/FM', ('cell_type', 'Subtype')] = ("Treed_Large_Home", "Multi-Family")
+plan_gdf.loc[
+    plan_gdf['ZoneType'] == 'Residential RM/FM',
+    ('cell_type', 'Subtype')
+] = ("Treed_Large_Home", "Multi-Family")
 
 plan_gdf.loc[
     (plan_gdf['ZoneType'] == "Residential RT/RS Zone") &
@@ -114,11 +117,7 @@ plan_gdf.loc[
 #     "Subtype"
 # ] = "Industrial"
 
-
-plan_gdf.plot()
-
 plan_gdf = plan_gdf[~plan_gdf['cell_type'].isna()]
 plan_gdf['clus_gmm'] = plan_gdf['cell_type'].replace(dict(map(reversed, TYPES.items())))
 plan_gdf = plan_gdf.dropna(subset=['clus_gmm'])
-plan_gdf.to_file('del_new_types.shp')
 plan_gdf.to_file('../data/geojson/broadway_future.geojson', driver='GeoJSON')

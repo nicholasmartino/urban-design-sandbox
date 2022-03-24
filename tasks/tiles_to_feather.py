@@ -1,9 +1,5 @@
 import geopandas as gpd
-
-SERVER_DIR = "R:/Research/eLabs/50_projects/20_City_o_Vancouver"
-TILE_DIR = f"{SERVER_DIR}/22_SSHRC Partnership Engage/02_shapefiles"
-NETWORK_DIR = f"{SERVER_DIR}/SSHRC Partnership Engage/Sandbox/shp/elementslab/Version_3"
-FEATHER_DIR = "../data/feather"
+from variables import *
 
 # Backup current files
 current_network = gpd.read_feather(f"{FEATHER_DIR}/all_tiles_network.feather")
