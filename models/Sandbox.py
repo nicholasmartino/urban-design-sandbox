@@ -8,6 +8,13 @@ from store import *
 
 class Indicators:
 	def __init__(self, parcels=None, buildings=None, streets=None, blocks=None):
+		"""
+		Estimates a series of urban form and land use indicators.
+		:param parcels:
+		:param buildings:
+		:param streets:
+		:param blocks:
+		"""
 		parcels['pid'] = parcels.index
 		buildings['bid'] = buildings.index
 		self.parcels = parcels
@@ -181,24 +188,6 @@ class Indicators:
 		return gdf
 
 	def get_block_area(self):
-		# streets = self.streets.copy()
-		# not_lanes = self.streets[(self.streets['laneway'] == 0) | (self.streets['laneway'].isna())].copy()
-		# not_lanes['geometry'] = not_lanes.buffer(6)
-		#
-		# not_lanes_os = gpd.overlay(not_lanes, self.parcels.loc[self.parcels['LANDUSE'] == 'OS', ['geometry']].copy(), how='difference')
-		# blocks_gdf = gpd.overlay(gpd.GeoDataFrame({'geometry': [self.parcels.unary_union.convex_hull]}, crs=self.parcels.crs), not_lanes_os, how='difference')
-		# blocks_gdf = Shape(blocks_gdf).divorce()
-
-		# # Buffer laneways
-		# lanes = streets[streets['laneway'] == '1'].copy()
-		# lanes['geometry'] = lanes.buffer(6)
-		#
-		# # Remove lanes that intersect with open spaces
-		# parcels = self.parcels.copy()
-		# parcels['geometry'] = parcels.buffer(5)
-		# lanes = gpd.overlay(lanes.loc[:, ['geometry']], parcels[parcels['LANDUSE'] == 'OS'], how="difference")
-		# lanes = gpd.overlay(lanes.loc[:, ['geometry']], self.blocks)
-
 		# Merge parcels and buffered lanes to form blocks
 		parcels = self.parcels.copy()
 		parcels.loc[parcels['LANDUSE'] == 'OS', 'geometry'] = [geom.buffer(5) for geom in parcels.loc[parcels['LANDUSE'] == 'OS', 'geometry']]
@@ -247,6 +236,15 @@ class Indicators:
 
 class Scenario:
 	def __init__(self, parcels, buildings, trees, real_parks, real_trees, name=''):
+		"""
+		Relates urban form and land use data from the Sandbox to existing trees and green spaces.
+		:param parcels:
+		:param buildings:
+		:param trees:
+		:param real_parks:
+		:param real_trees:
+		:param name:
+		"""
 		self.parcels = parcels
 		self.trees = trees
 		self.buildings = buildings
@@ -256,6 +254,10 @@ class Scenario:
 		return
 
 	def extract_parks(self):
+		"""
+		Extract open spaces from the City of Vancouver Open Data portal and overlay to parcels and buildings input.
+		:return:
+		"""
 		prcls = self.parcels.copy()
 
 		assert 'LANDUSE' in prcls.columns, KeyError("'LANDUSE' column not found in parcels GeoDataFrame")

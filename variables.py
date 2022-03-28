@@ -1,5 +1,5 @@
 GRID_DIR = 'data/grids'
-GRID_FILE = 'broadway_plan_baseline.geojson'
+GRID_FILE = 'broadway_plan_baseline.geojson'  # Default grid file
 GRID_FILES = [
     'dunbar_baseline.geojson',
     'kitsilano_baseline.geojson',
@@ -21,7 +21,6 @@ TYPES = {
     13: 'Dense_TOD',
     14: 'Dense_Industrial',
     15: 'Moderate_Industrial'
-
 }
 COLORS = {
     2: '8CD1E5',
