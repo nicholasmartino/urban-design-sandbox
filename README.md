@@ -23,11 +23,10 @@ Run the application
 ```
 python application.py
 ```
-Click on the link 
+Click on the link that appears in the terminal
 
 ## Using the Dashboard
 ![Using the dashboard](https://raw.githubusercontent.com/nicholasmartino/urban-design-sandbox/master/images/Dashboard-01.png)
-
 
 ## References
 [elementslab Projects](https://www.elementslab.ca/projects/) \
