@@ -1,5 +1,5 @@
 GRID_DIR = 'data/grids'
-GRID_FILE = 'broadway_plan_baseline.geojson'  # Default grid file
+GRID_FILE = 'broadway_core.geojson'  # Default grid file
 GRID_FILES = [
     'dunbar_baseline.geojson',
     'kitsilano_baseline.geojson',

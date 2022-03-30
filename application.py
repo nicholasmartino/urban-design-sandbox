@@ -265,6 +265,7 @@ def update_image(memory):
     Output(component_id="fsr", component_property="children"),
     Output(component_id="max_height", component_property="children"),
     Output(component_id="loading-output-1", component_property="children"),
+    Output(component_id="prefix", component_property="data"),
     [
         # Input(component_id="type", component_property="value"),
         # Input(component_id='rotate', component_property='n_clicks'),
@@ -287,13 +288,14 @@ def main_callback(update_sandbox, memory, uploaded, file_name):
         except AssertionError:
             _, _, tb = sys.exc_info()
             return None, True, f"{_}", None, None, None, None, None, None, None, None, None
-        prefix = file_name
+        prefix = f"{file_name.split('.')[0]}_"
         r.layers = []
     else:
         grid_gdf = GRID_GDF
-        prefix = GRID_FILE.split('.')[0]
+        prefix = f"{GRID_FILE.split('.')[0]}_"
 
-    all_layers_file = f"data/feather/{prefix}_all_layers.feather"
+    print(prefix)
+    all_layers_file = f"data/feather/{prefix}all_layers.feather"
     buildings_file = f"data/feather/{prefix}buildings.feather"
     parcels_file = f"data/feather/{prefix}parcels.feather"
 
@@ -350,8 +352,6 @@ def main_callback(update_sandbox, memory, uploaded, file_name):
             grid.test_assign_subtypes()
             tiles = grid.test_place_tiles()
             tiles.loc[:, [col for col in tiles.columns if col not in ['laneway']]].to_feather(all_layers_file)
-
-        prefix = f"{prefix.split('.')[0]}_"
 
         p_exists = os.path.exists(f"data/feather/{prefix}parcels.feather")
         b_exists = os.path.exists(f"data/feather/{prefix}buildings.feather")
@@ -456,7 +456,7 @@ def main_callback(update_sandbox, memory, uploaded, file_name):
     print(f"Callback: {round((time.time() - stt), 3)} seconds with {[l.id for l in r.layers]} layers")
     return \
         dgl, None, None, area_by_lu, fsr_hist, dwelling_mix, proximity, f"{total_units} units", \
-        f"{total_population} people", f"Mean FSR: {fsr}", max_height, None
+        f"{total_population} people", f"Mean FSR: {fsr}", max_height, None, prefix
 
 
 # Download contents
@@ -464,14 +464,12 @@ def main_callback(update_sandbox, memory, uploaded, file_name):
     Output("download", "data"),
     Input("deck_div", "children"),
     Input("btn-download", "n_clicks"),
+    Input("prefix", "data"),
     prevent_initial_call=True,
 )
-def download_layers(deck_div, n_clicks):
+def download_layers(deck_div, n_clicks, prefix):
     if n_clicks is not None:
-        out_gdf = gpd.GeoDataFrame()
-        for file in os.listdir('data/feather'):
-            if 'all_layers' in file:
-                out_gdf = pd.concat([out_gdf, gpd.read_feather(f'data/feather/{file}')])
+        out_gdf = gpd.read_feather(f'data/feather/{prefix}all_layers.feather')
         return dict(content=out_gdf.to_json(), filename="all_layers.geojson")
 
 

@@ -140,7 +140,8 @@ layout = html.Div(
 						html.Button("Download Layers", id="btn-download", style={
 							"float": "right", 'display': 'inline-block'
 						}),
-						de.Download(id="download")
+						de.Download(id="download"),
+						dcc.Store(id='prefix')
 					]
 				)
 			]
