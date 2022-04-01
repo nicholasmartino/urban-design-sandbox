@@ -5,7 +5,7 @@
 ### Install Requirements
 Download and install [Python](https://www.python.org/downloads/) \
 Download and install [Git](https://git-scm.com/downloads) \
-Download and install [Anaconda](https://www.anaconda.com/)
+Download and install [Anaconda](https://www.anaconda.com/) \
 Download and install [PyCharm](https://www.jetbrains.com/pycharm/download)
 
 ### Clone Repository
